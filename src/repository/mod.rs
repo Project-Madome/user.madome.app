@@ -1,19 +1,19 @@
-mod user_repository;
+mod inmemory;
+mod postgresql;
+pub mod r#trait;
+
+pub use inmemory::*;
+pub use postgresql::*;
 
 use std::sync::Arc;
 
 use sai::{Component, ComponentLifecycle, Injected};
-pub use user_repository::InMemoryUserRepository;
-
-pub mod r#trait {
-    pub use super::user_repository::r#trait::UserRepository;
-}
 
 #[derive(Component)]
 #[lifecycle]
 pub struct RepositorySet {
     #[injected]
-    user_repository: Injected<InMemoryUserRepository>,
+    user_repository: Injected<PostgresqlUserRepository>,
 }
 
 impl RepositorySet {

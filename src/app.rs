@@ -12,7 +12,7 @@ use crate::config::Config;
 use crate::model::Model;
 use crate::msg::Msg;
 use crate::repository::RepositorySet;
-use crate::usecase::{add_user, get_user};
+use crate::usecase::{create_user, get_user};
 use crate::utils::r#async::AsyncTryFrom;
 
 #[derive(Component)]
@@ -33,7 +33,7 @@ impl Resolver {
         // let config = Arc::clone(&self.config);
 
         let model = match msg {
-            Msg::AddUser(payload) => add_user::execute(payload, repository).await?.into(),
+            Msg::CreateUser(payload) => create_user::execute(payload, repository).await?.into(),
 
             Msg::GetUser(payload) => get_user::execute(payload, repository).await?.into(),
         };

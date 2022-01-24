@@ -20,7 +20,7 @@ pub type Model = model::User;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("")]
+    #[error("Already exist error")]
     AlreadyExistUser,
 }
 

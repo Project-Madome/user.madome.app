@@ -28,7 +28,8 @@ mod root_registry {
     use crate::{
         app::{HttpServer, Resolver},
         config::Config,
-        repository::{InMemoryUserRepository, RepositorySet},
+        database::DatabaseSet,
+        repository::{InMemoryUserRepository, PostgresqlUserRepository, RepositorySet},
     };
 
     combine_component_registry!(
@@ -45,7 +46,15 @@ mod root_registry {
 
     component_registry!(ControllerRegistry, [Resolver]);
 
-    component_registry!(RepositoryRegistry, [RepositorySet, InMemoryUserRepository]);
+    component_registry!(
+        RepositoryRegistry,
+        [
+            DatabaseSet,
+            RepositorySet,
+            InMemoryUserRepository,
+            PostgresqlUserRepository
+        ]
+    );
 
     // component_registry!(CommandRegistry, [CommandSet]);
 

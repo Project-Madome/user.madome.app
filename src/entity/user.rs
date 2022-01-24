@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct User {
-    pub id: String,
+    pub id: Uuid,
     pub name: String,
     pub email: String,
     pub role: UserRole,
@@ -14,7 +14,7 @@ pub struct User {
 impl User {
     pub fn new(name: String, email: String, role: UserRole) -> Self {
         let now = Utc::now();
-        let id = Uuid::new_v4().to_string();
+        let id = Uuid::new_v4();
 
         Self {
             id,
@@ -31,4 +31,14 @@ impl User {
 pub enum UserRole {
     Normal = 0,
     Developer = 1,
+}
+
+impl From<u8> for UserRole {
+    fn from(role: u8) -> Self {
+        match role {
+            0 => Self::Normal,
+            1 => Self::Developer,
+            _ => panic!(),
+        }
+    }
 }

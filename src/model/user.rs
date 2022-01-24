@@ -38,7 +38,7 @@ impl From<entity::User> for User {
         }: entity::User,
     ) -> Self {
         Self {
-            id,
+            id: id.to_string(),
             email,
             name,
             role: role.into(),

@@ -24,7 +24,7 @@ pub type Model = model::User;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("")]
+    #[error("Not found user")]
     NotFoundUser,
 }
 

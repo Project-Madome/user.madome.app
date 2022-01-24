@@ -2,10 +2,7 @@ use std::sync::Mutex;
 
 use sai::Component;
 
-use crate::entity::user::User;
-
-#[derive(Debug, thiserror::Error)]
-pub enum Error {}
+use crate::{entity::User, repository::r#trait::UserRepository};
 
 #[derive(Component)]
 pub struct InMemoryUserRepository {
@@ -13,7 +10,7 @@ pub struct InMemoryUserRepository {
 }
 
 #[async_trait::async_trait]
-impl r#trait::UserRepository for InMemoryUserRepository {
+impl UserRepository for InMemoryUserRepository {
     async fn add(&self, user: User) -> crate::Result<Option<User>> {
         let mut inner = self.inner.lock().unwrap();
 
@@ -35,22 +32,9 @@ impl r#trait::UserRepository for InMemoryUserRepository {
 
         let user = inner
             .iter()
-            .find(|user| user.id == id_or_email || user.email == id_or_email)
+            .find(|user| user.id.to_string() == id_or_email || user.email == id_or_email)
             .cloned();
 
         Ok(user)
-    }
-}
-
-pub mod r#trait {
-    use crate::entity::user::User;
-
-    #[async_trait::async_trait]
-    pub trait UserRepository: Send + Sync {
-        // async fn update(&self, ) -> crate::Result<Option<User>>;
-
-        async fn add(&self, user: User) -> crate::Result<Option<User>>;
-
-        async fn get(&self, id_or_email: String) -> crate::Result<Option<User>>;
     }
 }

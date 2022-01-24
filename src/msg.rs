@@ -2,7 +2,7 @@ use hyper::{Body, Method, Request};
 use serde::de::DeserializeOwned;
 
 use crate::{
-    usecase::{add_user, get_user},
+    usecase::{create_user, get_user},
     utils::{
         http::url::{is_path_variable, PathVariable},
         r#async::{AsyncTryFrom, AsyncTryInto},
@@ -25,7 +25,7 @@ pub enum Error {
 /// 실행되는 순서는 Resolver 참조
 pub enum Msg {
     GetUser(get_user::Payload),
-    AddUser(add_user::Payload),
+    CreateUser(create_user::Payload),
 }
 
 fn matcher(req_path: &str, pattern: &str) -> bool {
@@ -54,7 +54,7 @@ impl AsyncTryFrom<Request<Body>> for Msg {
         let path = request.uri().path();
 
         let msg = match (method, path) {
-            (Method::POST, "/users") => Msg::AddUser(request.async_try_into().await?),
+            (Method::POST, "/users") => Msg::CreateUser(request.async_try_into().await?),
             (Method::GET, path) if matcher(path, "/users/:user_id") => {
                 Msg::GetUser(PathVariable::from((path, "/users/:user_id")).into())
             }
