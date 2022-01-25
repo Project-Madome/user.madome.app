@@ -1,7 +1,7 @@
 [package]
 name = "madome-user"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -21,3 +21,4 @@ log = "0.4.14"
 simple_logger = "2.1.0"
 sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros", "sqlx-chrono", "sqlx-uuid"], default-features = false }
 inspect = { git = "https://github.com/syrflover/inspect-rs" }
+openssl = { version = "0.10.38", features = ["vendored"] }

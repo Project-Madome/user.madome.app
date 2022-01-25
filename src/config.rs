@@ -12,7 +12,7 @@ where
     var.parse().expect("Please set dotenv to valid value")
 }
 
-#[derive(Component)]
+#[derive(Debug, Component)]
 #[lifecycle]
 pub struct Config {
     port: Option<u16>,
@@ -28,6 +28,8 @@ impl ComponentLifecycle for Config {
         self.port.replace(env("PORT"));
 
         self.postgres_url.replace(env("POSTGRES_URL"));
+
+        log::info!("Config {:?}", self);
     }
 }
 
