@@ -11,8 +11,6 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-chmod +x ./target/x86_64-unknown-linux-musl/release/madome-user
-
 cp ./target/x86_64-unknown-linux-musl/release/madome-user "./bin/linux-x86_64/${VERSION}"
 
 github-release -v release \
