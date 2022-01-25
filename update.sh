@@ -9,7 +9,7 @@ VERSION="$(git log --pretty=format:"%h" -1)"
 
 github-release -v download \
     --user syrflover \
-    --repo auth.madome.app \
+    --repo user.madome.app \
     --tag "_${VERSION}" \
     --name "${VERSION}-linux-x86_64"
 
