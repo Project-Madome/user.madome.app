@@ -20,3 +20,4 @@ chrono = { version = "0.4.19", features = ["serde"] }
 log = "0.4.14"
 simple_logger = "2.1.0"
 sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros", "sqlx-chrono", "sqlx-uuid"], default-features = false }
+inspect = { git = "https://github.com/syrflover/inspect-rs" }

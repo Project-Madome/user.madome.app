@@ -12,9 +12,9 @@ use crate::{
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("")]
+    #[error("Not found")]
     NotFound,
-    #[error("")]
+    #[error("Json deserialize")]
     JsonDeserializePayload(serde_json::Error),
 }
 
