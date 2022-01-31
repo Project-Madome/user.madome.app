@@ -11,11 +11,10 @@ use inspect::{Inspect, InspectOk};
 use sai::{Component, ComponentLifecycle, Injected};
 
 use crate::config::Config;
-use crate::model::Model;
+use crate::model::{Model, Presenter};
 use crate::msg::Msg;
 use crate::repository::RepositorySet;
 use crate::usecase::{create_user, get_user};
-use crate::utils::r#async::AsyncTryFrom;
 
 #[derive(Component)]
 pub struct Resolver {
@@ -55,12 +54,18 @@ pub struct HttpServer {
     config: Injected<Config>,
 }
 
-async fn handler(request: Request<Body>, resolver: Arc<Resolver>) -> crate::Result<Response<Body>> {
-    let msg = Msg::async_try_from(request).await?;
+async fn handler(
+    request: Request<Body>,
+    resolver: Arc<Resolver>,
+    config: Arc<Config>,
+) -> crate::Result<Response<Body>> {
+    let response = Response::builder();
+
+    let (msg, response) = Msg::http(request, response, config).await?;
 
     let model = resolver.resolve(msg).await?;
 
-    let response = model.into();
+    let response = model.to_http(response);
 
     Ok(response)
 }
@@ -68,6 +73,7 @@ async fn handler(request: Request<Body>, resolver: Arc<Resolver>) -> crate::Resu
 async fn service(
     request: Request<Body>,
     resolver: Arc<Resolver>,
+    config: Arc<Config>,
 ) -> Result<Response<Body>, Infallible> {
     let req_method = request.method().to_owned();
     let req_uri = request.uri().to_string();
@@ -76,7 +82,7 @@ async fn service(
 
     let start = SystemTime::now();
 
-    let response = handler(request, resolver).await;
+    let response = handler(request, resolver, config).await;
 
     let end = start
         .elapsed()
@@ -108,20 +114,24 @@ impl ComponentLifecycle for HttpServer {
         self.rx.replace(rx); */
 
         let resolver = Arc::clone(&self.resolver);
+        let config = Arc::clone(&self.config);
 
         let port = self.config.port();
 
         tokio::spawn(async move {
             let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
-            let svc = |resolver: Arc<Resolver>| async move {
+            let svc = |resolver: Arc<Resolver>, config: Arc<Config>| async move {
                 Ok::<_, Infallible>(service_fn(move |request| {
-                    service(request, Arc::clone(&resolver))
+                    service(request, resolver.clone(), config.clone())
                 }))
             };
 
-            let server = hyper::Server::bind(&addr)
-                .serve(make_service_fn(move |_| svc(Arc::clone(&resolver))));
+            let server = hyper::Server::bind(&addr).serve(make_service_fn(move |_| {
+                svc(resolver.clone(), config.clone())
+            }));
+
+            log::info!("started http server: 0.0.0.0:{}", port);
 
             if let Err(err) = server.await {
                 panic!("{:?}", err);

@@ -13,6 +13,9 @@ pub enum Error {
     #[error("Repository: {0}")]
     Repository(#[from] RepositoryError),
 
+    #[error("AuthSdk: {0}")]
+    AuthSdk(#[from] madome_sdk::auth::Error),
+
     // TODO: 나중에 위치 재선정
     #[error("ReadChunksFromBody: {0}")]
     ReadChunksFromBody(#[from] hyper::Error),
@@ -69,6 +72,8 @@ impl From<Error> for Response<Body> {
             UseCase(GetUser(NotFoundUser)) => response
                 .status(StatusCode::NOT_FOUND)
                 .body("Not found user".into()),
+
+            AuthSdk(err) => err.to_http_response(response),
 
             err => response
                 .status(StatusCode::INTERNAL_SERVER_ERROR)

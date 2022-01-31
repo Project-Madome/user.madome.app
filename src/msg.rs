@@ -1,13 +1,20 @@
-use hyper::{Body, Method, Request};
+use std::sync::Arc;
+
+use hyper::{http::response::Builder as ResponseBuilder, Body, Method, Request};
+use madome_sdk::auth::{self, Auth, Role, MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN};
 use serde::de::DeserializeOwned;
+use util::{
+    http::{
+        url::{is_path_variable, PathVariable},
+        Cookie, SetHeaders,
+    },
+    r#async::AsyncTryFrom,
+    ReadChunks,
+};
 
 use crate::{
+    config::Config,
     usecase::{create_user, get_user},
-    utils::{
-        http::url::{is_path_variable, PathVariable},
-        r#async::{AsyncTryFrom, AsyncTryInto},
-        ReadChunks,
-    },
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -28,6 +35,62 @@ pub enum Msg {
     CreateUser(create_user::Payload),
 }
 
+impl Msg {
+    pub async fn http(
+        request: Request<Body>,
+        mut response: ResponseBuilder,
+        config: Arc<Config>,
+    ) -> crate::Result<(Self, ResponseBuilder)> {
+        use Role::*;
+
+        let method = request.method().clone();
+        let path = request.uri().path();
+        let cookie = Cookie::from(request.headers());
+
+        let access_token = cookie.get(MADOME_ACCESS_TOKEN).unwrap_or_default();
+        let refresh_token = cookie.get(MADOME_REFRESH_TOKEN).unwrap_or_default();
+
+        let auth = Auth::new(
+            config.madome_auth_url(),
+            auth::has_public(request.headers()),
+        );
+
+        let (r, msg) = match (method, path) {
+            (Method::POST, "/users") => {
+                let p = Wrap::async_try_from(request).await?.inner();
+
+                let maybe_token_pair = auth
+                    .check_and_refresh(access_token, refresh_token, Developer(None))
+                    .await?;
+
+                (maybe_token_pair, Msg::CreateUser(p))
+            }
+            (Method::GET, path) if matcher(path, "/users/:user_id") => {
+                let p: get_user::Payload = PathVariable::from((path, "/users/:user_id")).into();
+
+                let maybe_token_pair =
+                    auth // TODO: 일단은 id만 됨. 이메일로 접근하는 방법은 아마 internal_auth를 통해서만 제공할 예정
+                        .check_and_refresh(
+                            access_token,
+                            refresh_token,
+                            Normal(Some(&p.id_or_email)),
+                        )
+                        .await?;
+
+                (maybe_token_pair, Msg::GetUser(p))
+            }
+            _ => return Err(Error::NotFound.into()),
+        };
+
+        if let Some(set_cookie) = r {
+            // response에 쿠키 설정하고 response 넘겨줌
+            response = response.headers(set_cookie.iter());
+        }
+
+        Ok((msg, response))
+    }
+}
+
 fn matcher(req_path: &str, pattern: &str) -> bool {
     let mut origin = req_path.split('/');
     let pats = pattern.split('/');
@@ -45,28 +108,16 @@ fn matcher(req_path: &str, pattern: &str) -> bool {
     origin.next().is_none()
 }
 
-#[async_trait::async_trait]
-impl AsyncTryFrom<Request<Body>> for Msg {
-    type Error = crate::Error;
+pub struct Wrap<P>(pub P);
 
-    async fn async_try_from(request: Request<Body>) -> Result<Self, Self::Error> {
-        let method = request.method().clone();
-        let path = request.uri().path();
-
-        let msg = match (method, path) {
-            (Method::POST, "/users") => Msg::CreateUser(request.async_try_into().await?),
-            (Method::GET, path) if matcher(path, "/users/:user_id") => {
-                Msg::GetUser(PathVariable::from((path, "/users/:user_id")).into())
-            }
-            _ => return Err(Error::NotFound.into()),
-        };
-
-        Ok(msg)
+impl<P> Wrap<P> {
+    pub fn inner(self) -> P {
+        self.0
     }
 }
 
 #[async_trait::async_trait]
-impl<P> AsyncTryFrom<Request<Body>> for P
+impl<P> AsyncTryFrom<Request<Body>> for Wrap<P>
 where
     P: DeserializeOwned,
 {
@@ -78,6 +129,6 @@ where
         let payload =
             serde_json::from_slice::<P>(&chunks).map_err(Error::JsonDeserializePayload)?;
 
-        Ok(payload)
+        Ok(Wrap(payload))
     }
 }

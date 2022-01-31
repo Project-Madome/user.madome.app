@@ -2,9 +2,17 @@ mod user;
 
 pub use user::User;
 
+use hyper::http::response::Builder as ResponseBuilder;
+
 use crate::{into_model, model};
 
 into_model![(User, model::User),];
+
+pub trait Presenter: Sized {
+    fn to_http(self, _response: ResponseBuilder) -> hyper::Response<hyper::Body> {
+        unimplemented!()
+    }
+}
 
 #[macro_export]
 macro_rules! into_model {
@@ -24,13 +32,13 @@ macro_rules! into_model {
         )*
 
 
-        impl From<Model> for hyper::Response<hyper::Body> {
-            fn from(model: Model) -> Self {
+        impl Presenter for Model {
+            fn to_http(self, response: ResponseBuilder) -> hyper::Response<hyper::Body> {
                 use Model::*;
 
-                match model {
+                match self {
                     $(
-                        $member(model) => model.into(),
+                        $member(model) => model.to_http(response),
                     )*
                 }
             }

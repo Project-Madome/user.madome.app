@@ -11,7 +11,6 @@ mod msg;
 mod registry;
 mod repository;
 mod usecase;
-mod utils;
 
 pub use registry::RootRegistry;
 

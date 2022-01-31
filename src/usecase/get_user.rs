@@ -1,10 +1,10 @@
 use std::sync::Arc;
+use util::http::url::PathVariable;
 
 use crate::{
     error::UseCaseError,
     model,
     repository::{r#trait::UserRepository, RepositorySet},
-    utils::http::url::PathVariable,
 };
 
 #[derive(Clone)]

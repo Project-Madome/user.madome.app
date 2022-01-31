@@ -18,6 +18,8 @@ pub struct Config {
     port: Option<u16>,
 
     postgres_url: Option<String>,
+
+    madome_auth_url: Option<String>,
 }
 
 #[async_trait::async_trait]
@@ -29,7 +31,9 @@ impl ComponentLifecycle for Config {
 
         self.postgres_url.replace(env("POSTGRES_URL"));
 
-        log::info!("Config {:?}", self);
+        self.madome_auth_url.replace(env("MADOME_AUTH_URL"));
+
+        log::info!("{:?}", self);
     }
 }
 
@@ -40,5 +44,9 @@ impl Config {
 
     pub fn postgres_url(&self) -> &str {
         self.postgres_url.as_ref().unwrap()
+    }
+
+    pub fn madome_auth_url(&self) -> &str {
+        self.madome_auth_url.as_ref().unwrap()
     }
 }

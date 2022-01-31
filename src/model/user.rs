@@ -1,8 +1,10 @@
 use chrono::{DateTime, Utc};
-use hyper::{Body, Response, StatusCode};
+use hyper::StatusCode;
 use serde::Serialize;
 
 use crate::{constant::http::header, entity};
+
+use super::Presenter;
 
 #[derive(Serialize)]
 pub struct User {
@@ -14,11 +16,11 @@ pub struct User {
     pub updated_at: DateTime<Utc>,
 }
 
-impl From<User> for Response<Body> {
-    fn from(user: User) -> Self {
-        let serialized = serde_json::to_vec(&user).expect("json serialize");
+impl Presenter for User {
+    fn to_http(self, response: hyper::http::response::Builder) -> hyper::Response<hyper::Body> {
+        let serialized = serde_json::to_vec(&self).expect("json serialize");
 
-        Response::builder()
+        response
             .status(StatusCode::OK)
             .header(header::CONTENT_TYPE, header::APPLICATION_JSON)
             .body(serialized.into())

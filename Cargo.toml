@@ -22,3 +22,5 @@ simple_logger = "2.1.0"
 sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros", "sqlx-chrono", "sqlx-uuid"], default-features = false }
 inspect = { git = "https://github.com/syrflover/inspect-rs" }
 openssl = { version = "0.10.38", features = ["vendored"] }
+util = { path = "../util" }
+madome-sdk = { path = "../madome-sdk" }
