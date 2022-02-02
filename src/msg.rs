@@ -57,27 +57,43 @@ impl Msg {
 
         let (r, msg) = match (method, path) {
             (Method::POST, "/users") => {
-                let p = Wrap::async_try_from(request).await?.inner();
-
-                let maybe_token_pair = auth
+                let (_, maybe_token_pair) = auth
                     .check_and_refresh(access_token, refresh_token, Developer(None))
                     .await?;
 
+                let p = Wrap::async_try_from(request).await?.inner();
+
                 (maybe_token_pair, Msg::CreateUser(p))
             }
-            (Method::GET, path) if matcher(path, "/users/:user_id") => {
-                let p: get_user::Payload = PathVariable::from((path, "/users/:user_id")).into();
+            (Method::GET, path) if path == "/users/@me" || matcher(path, "/users/:user_id") => {
+                match path {
+                    "/users/@me" => {
+                        let (r, maybe_token_pair) = auth
+                            .check_and_refresh(access_token, refresh_token, Normal(None))
+                            .await?;
 
-                let maybe_token_pair =
-                    auth // TODO: 일단은 id만 됨. 이메일로 접근하는 방법은 아마 internal_auth를 통해서만 제공할 예정
-                        .check_and_refresh(
-                            access_token,
-                            refresh_token,
-                            Normal(Some(&p.id_or_email)),
-                        )
-                        .await?;
+                        let p = get_user::Payload {
+                            id_or_email: r.user_id,
+                        };
 
-                (maybe_token_pair, Msg::GetUser(p))
+                        (maybe_token_pair, Msg::GetUser(p))
+                    }
+                    _ => {
+                        let p: get_user::Payload =
+                            PathVariable::from((path, "/users/:user_id")).into();
+
+                        // TODO: 일단은 id만 됨. 이메일로 접근하는 방법은 아마 internal_auth를 통해서만 제공됨
+                        let (_, maybe_token_pair) = auth
+                            .check_and_refresh(
+                                access_token,
+                                refresh_token,
+                                Normal(Some(&p.id_or_email)),
+                            )
+                            .await?;
+
+                        (maybe_token_pair, Msg::GetUser(p))
+                    }
+                }
             }
             _ => return Err(Error::NotFound.into()),
         };

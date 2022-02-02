@@ -23,4 +23,4 @@ sea-orm = { version = "^0", features = ["sqlx-postgres", "runtime-tokio-native-t
 inspect = { git = "https://github.com/syrflover/inspect-rs" }
 openssl = { version = "0.10.38", features = ["vendored"] }
 util = { path = "../util" }
-madome-sdk = { path = "../madome-sdk" }
+madome-sdk = { path = "../madome-sdk", features = ["server"] }
