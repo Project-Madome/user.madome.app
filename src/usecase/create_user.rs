@@ -5,7 +5,6 @@ use serde::Deserialize;
 use crate::{
     entity::user::{User, UserRole},
     error::UseCaseError,
-    model,
     repository::{r#trait::UserRepository, RepositorySet},
 };
 
@@ -16,7 +15,7 @@ pub struct Payload {
     // role: u8,
 }
 
-pub type Model = model::User;
+pub struct Model;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -39,7 +38,7 @@ pub async fn execute(
     let maybe_saved = repository.user().add(new_user).await?;
 
     match maybe_saved {
-        Some(user) => Ok(user.into()),
+        Some(_user) => Ok(Model),
         None => Err(Error::AlreadyExistUser.into()),
     }
 }
