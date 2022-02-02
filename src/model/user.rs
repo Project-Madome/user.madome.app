@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
-use hyper::StatusCode;
+use hyper::{header, StatusCode};
 use serde::Serialize;
 
-use crate::{constant::http::header, entity};
+use crate::entity;
 
 use super::Presenter;
 
@@ -22,7 +22,7 @@ impl Presenter for User {
 
         response
             .status(StatusCode::OK)
-            .header(header::CONTENT_TYPE, header::APPLICATION_JSON)
+            .header(header::CONTENT_TYPE, "application/json")
             .body(serialized.into())
             .unwrap()
     }
