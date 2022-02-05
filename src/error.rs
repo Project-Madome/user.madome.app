@@ -73,7 +73,7 @@ impl From<Error> for Response<Body> {
                 .status(StatusCode::NOT_FOUND)
                 .body("Not found user".into()),
 
-            AuthSdk(err) => err.to_http_response(response),
+            AuthSdk(err) => err.to_http(response),
 
             err => response
                 .status(StatusCode::INTERNAL_SERVER_ERROR)

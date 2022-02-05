@@ -12,8 +12,13 @@ use sai::{Component, ComponentLifecycle, Injected};
 #[derive(Component)]
 #[lifecycle]
 pub struct RepositorySet {
+    #[cfg(not(test))]
     #[injected]
     user_repository: Injected<PostgresqlUserRepository>,
+
+    #[cfg(test)]
+    #[injected]
+    user_repository: Injected<InMemoryUserRepository>,
 }
 
 impl RepositorySet {

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use hyper::{http::response::Builder as ResponseBuilder, Body, Method, Request};
-use madome_sdk::auth::{self, Auth, Role, MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN};
+use madome_sdk::auth::{Auth, Role, MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN};
 use serde::de::DeserializeOwned;
 use util::{
     http::{
@@ -50,51 +50,42 @@ impl Msg {
         let access_token = cookie.get(MADOME_ACCESS_TOKEN).unwrap_or_default();
         let refresh_token = cookie.get(MADOME_REFRESH_TOKEN).unwrap_or_default();
 
-        let auth = Auth::new(
-            config.madome_auth_url(),
-            auth::has_public(request.headers()),
-        );
+        let auth = Auth::new(config.madome_auth_url());
 
         let (r, msg) = match (method, path) {
+            /* Public */
             (Method::POST, "/users") => {
                 let (_, maybe_token_pair) = auth
-                    .check_and_refresh(access_token, refresh_token, Developer(None))
+                    .check_and_refresh_token_pair(access_token, refresh_token, Developer)
                     .await?;
 
                 let p = Wrap::async_try_from(request).await?.inner();
 
-                (maybe_token_pair, Msg::CreateUser(p))
+                (Some(maybe_token_pair), Msg::CreateUser(p))
             }
-            (Method::GET, path) if path == "/users/@me" || matcher(path, "/users/:user_id") => {
-                match path {
-                    "/users/@me" => {
-                        let (r, maybe_token_pair) = auth
-                            .check_and_refresh(access_token, refresh_token, Normal(None))
-                            .await?;
 
-                        let p = get_user::Payload {
-                            id_or_email: r.user_id,
-                        };
+            (Method::GET, "/users/@me") => {
+                let (r, maybe_token_pair) = auth
+                    .check_and_refresh_token_pair(access_token, refresh_token, Normal)
+                    .await?;
 
-                        (maybe_token_pair, Msg::GetUser(p))
-                    }
-                    _ => {
-                        let p: get_user::Payload =
-                            PathVariable::from((path, "/users/:user_id")).into();
+                let p = get_user::Payload {
+                    id_or_email: r.user_id,
+                };
 
-                        // TODO: 일단은 id만 됨. 이메일로 접근하는 방법은 아마 internal_auth를 통해서만 제공됨
-                        let (_, maybe_token_pair) = auth
-                            .check_and_refresh(
-                                access_token,
-                                refresh_token,
-                                Normal(Some(&p.id_or_email)),
-                            )
-                            .await?;
-
-                        (maybe_token_pair, Msg::GetUser(p))
-                    }
-                }
+                (Some(maybe_token_pair), Msg::GetUser(p))
             }
+
+            /* Internal */
+            (Method::GET, path) if matcher(path, "/users/:user_id_or_email") => {
+                auth.check_internal(request.headers())?;
+
+                let p: get_user::Payload =
+                    PathVariable::from((path, "/users/:user_id_or_email")).into();
+
+                (None, Msg::GetUser(p))
+            }
+
             _ => return Err(Error::NotFound.into()),
         };
 
