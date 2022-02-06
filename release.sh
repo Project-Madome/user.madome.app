@@ -1,4 +1,4 @@
-if [ "$(git branch)" = "* release"]; then
+if [ "$(git branch --show-current)" = "release" ]; then
     VERSION="$(cat Cargo.toml | grep 'version = ' | head -1 | sed -e 's/version = //' | sed -e 's/\"//g')"
     # FULL_VERSION="$(git log --pretty=format:"%H" -1)"
 
@@ -17,7 +17,6 @@ if [ "$(git branch)" = "* release"]; then
     github-release -v release \
         --user syrflover \
         --repo "user.madome.app" \
-        # --target "$FULL_VERSION" \
         --tag "v$VERSION" \
         --name "Released v$VERSION" \
         --description "$(date "+%Y.%m.%d.%H.%m")" \
