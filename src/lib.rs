@@ -18,6 +18,18 @@ use error::Error;
 
 type Result<T> = std::result::Result<T, Error>;
 
+pub fn release() -> bool {
+    cfg!(not(debug_assertions))
+}
+
+pub fn debug() -> bool {
+    cfg!(debug_assertions)
+}
+
+pub fn test() -> bool {
+    cfg!(test)
+}
+
 #[cfg(test)]
 pub mod tests {
     pub use super::registry::tests::RootRegistry;

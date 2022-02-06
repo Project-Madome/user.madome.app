@@ -18,7 +18,11 @@ pub struct Config {
     port: Option<u16>,
 
     postgres_url: Option<String>,
-
+    /* postgres_port: Option<String>,
+    postgres_host: Option<String>,
+    postgres_user: Option<String>,
+    postgres_pw: Option<String>,
+    postgres_db: Option<String>, */
     madome_auth_url: Option<String>,
 }
 
@@ -29,7 +33,16 @@ impl ComponentLifecycle for Config {
 
         self.port.replace(env("PORT"));
 
-        self.postgres_url.replace(env("POSTGRES_URL"));
+        let pg_port: u16 = env("POSTGRES_PORT");
+        let pg_host: String = env("POSTGRES_HOST");
+        let pg_user: String = env("POSTGRES_USER");
+        let pg_pw: String = env("POSTGRES_PW");
+        let pg_db: String = env("POSTGRES_DB");
+        let pg_url = format!(
+            "postgres://{}:{}@{}:{}/{}",
+            pg_user, pg_pw, pg_host, pg_port, pg_db
+        );
+        self.postgres_url.replace(pg_url);
 
         self.madome_auth_url.replace(env("MADOME_AUTH_URL"));
 
