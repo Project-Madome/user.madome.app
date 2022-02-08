@@ -65,6 +65,12 @@ impl From<Error> for Response<Body> {
                 .status(StatusCode::NOT_FOUND)
                 .body("Not found".into()),
 
+            UseCase(CreateUser(
+                err @ InvalidName(_) | err @ InvalidEmail(_) | err @ InvalidRole(_),
+            )) => response
+                .status(StatusCode::BAD_REQUEST)
+                .body(err.to_string().into()),
+
             UseCase(CreateUser(AlreadyExistUser)) => response
                 .status(StatusCode::CONFLICT)
                 .body("Already exist user".into()),
