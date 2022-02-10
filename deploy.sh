@@ -27,7 +27,9 @@ if [ "$(git branch --show-current)" = "release" ]; then
         exit 1
     fi
 else
-    cargo build --release --target=x86_64-unknown-linux-musl
+    # PREV_DOCKER_IMAGE_ID="$(docker images -q madome-user:latest)"
+
+    cargo build --target=x86_64-unknown-linux-musl
 
     if [ $? -ne 0 ]; then
         exit 1
@@ -35,7 +37,7 @@ else
 
     VERSION="latest"
 
-    BIN="./target/x86_64-unknown-linux-musl/release/madome-user"
+    BIN="./target/x86_64-unknown-linux-musl/debug/madome-user"
 fi
 
 chmod +x $BIN
@@ -63,4 +65,8 @@ kubectl apply -f -
 if [ $? -ne 0 ]; then
     echo "failed apply kubectl"
     exit 1
+fi
+
+if [ "$(git branch --show-current)" != "release" ]; then
+    kubectl rollout restart deployment/madome-user
 fi
