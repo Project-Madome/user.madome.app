@@ -139,7 +139,7 @@ impl ComponentLifecycle for HttpServer {
         self.stop_sender.replace(stop_tx);
         self.stopped_reciever.replace(stopped_rx);
 
-        let mut resolver = Some(Arc::clone(&self.resolver));
+        let resolver = Arc::clone(&self.resolver);
         let madome_auth_url = self.config.madome_auth_url().to_owned();
 
         let port = self.config.port();
@@ -154,7 +154,7 @@ impl ComponentLifecycle for HttpServer {
             };
 
             let server = Server::bind(&addr).serve(make_service_fn(move |_| {
-                svc(resolver.take().unwrap(), madome_auth_url.clone())
+                svc(resolver.clone(), madome_auth_url.clone())
             }));
 
             let server = Server::with_graceful_shutdown(server, async {
