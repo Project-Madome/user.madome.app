@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use hyper::{http::response::Builder as ResponseBuilder, Body, Method, Request};
 use madome_sdk::auth::{Auth, Role, MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN};
 use serde::de::DeserializeOwned;
@@ -12,11 +10,8 @@ use util::{
     IntoPayload, ReadChunks,
 };
 
-use crate::{
-    config::Config,
-    usecase::{
-        create_like, create_user, delete_like, get_likes, get_likes_from_book_tags, get_user,
-    },
+use crate::usecase::{
+    create_like, create_user, delete_like, get_likes, get_likes_from_book_tags, get_user,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -45,7 +40,7 @@ impl Msg {
     pub async fn http(
         request: Request<Body>,
         mut response: ResponseBuilder,
-        config: Arc<Config>,
+        madome_auth_url: String,
     ) -> crate::Result<(Self, ResponseBuilder)> {
         use Role::*;
 
@@ -56,7 +51,7 @@ impl Msg {
         let access_token = cookie.get(MADOME_ACCESS_TOKEN).unwrap_or_default();
         let refresh_token = cookie.get(MADOME_REFRESH_TOKEN).unwrap_or_default();
 
-        let auth = Auth::new(config.madome_auth_url());
+        let auth = Auth::new(&madome_auth_url);
 
         let (r, msg) = match (method, path) {
             /* Public */

@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use std::{convert::Infallible, net::SocketAddr};
 
+use hyper::Server;
 use hyper::{
     body::Body,
     http::{Request, Response},
@@ -9,6 +10,7 @@ use hyper::{
 };
 use inspect::{Inspect, InspectOk};
 use sai::{Component, ComponentLifecycle, Injected};
+use tokio::sync::oneshot;
 
 use crate::config::Config;
 use crate::model::{Model, Presenter};
@@ -66,16 +68,20 @@ pub struct HttpServer {
     rx: Option<mpsc::Receiver<()>>, */
     #[injected]
     config: Injected<Config>,
+
+    stop_sender: Option<oneshot::Sender<()>>,
+
+    stopped_reciever: Option<oneshot::Receiver<()>>,
 }
 
 async fn handler(
     request: Request<Body>,
     resolver: Arc<Resolver>,
-    config: Arc<Config>,
+    auth_url: String,
 ) -> crate::Result<Response<Body>> {
     let response = Response::builder();
 
-    let (msg, response) = Msg::http(request, response, config).await?;
+    let (msg, response) = Msg::http(request, response, auth_url).await?;
 
     let model = resolver.resolve(msg).await?;
 
@@ -87,7 +93,7 @@ async fn handler(
 async fn service(
     request: Request<Body>,
     resolver: Arc<Resolver>,
-    config: Arc<Config>,
+    auth_url: String,
 ) -> Result<Response<Body>, Infallible> {
     let req_method = request.method().to_owned();
     let req_uri = request.uri().to_string();
@@ -96,7 +102,7 @@ async fn service(
 
     let start = SystemTime::now();
 
-    let response = handler(request, resolver, config).await;
+    let response = handler(request, resolver, auth_url).await;
 
     let end = start
         .elapsed()
@@ -127,31 +133,51 @@ impl ComponentLifecycle for HttpServer {
         self.tx.replace(tx);
         self.rx.replace(rx); */
 
-        let resolver = Arc::clone(&self.resolver);
-        let config = Arc::clone(&self.config);
+        let (stop_tx, stop_rx) = oneshot::channel();
+        let (stopped_tx, stopped_rx) = oneshot::channel();
+
+        self.stop_sender.replace(stop_tx);
+        self.stopped_reciever.replace(stopped_rx);
+
+        let mut resolver = Some(Arc::clone(&self.resolver));
+        let madome_auth_url = self.config.madome_auth_url().to_owned();
 
         let port = self.config.port();
 
         tokio::spawn(async move {
             let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
-            let svc = |resolver: Arc<Resolver>, config: Arc<Config>| async move {
+            let svc = |resolver: Arc<Resolver>, madome_auth_url: String| async move {
                 Ok::<_, Infallible>(service_fn(move |request| {
-                    service(request, resolver.clone(), config.clone())
+                    service(request, resolver.clone(), madome_auth_url.clone())
                 }))
             };
 
-            let server = hyper::Server::bind(&addr).serve(make_service_fn(move |_| {
-                svc(resolver.clone(), config.clone())
+            let server = Server::bind(&addr).serve(make_service_fn(move |_| {
+                svc(resolver.take().unwrap(), madome_auth_url.clone())
             }));
+
+            let server = Server::with_graceful_shutdown(server, async {
+                stop_rx.await.unwrap();
+            });
 
             log::info!("started http server: 0.0.0.0:{}", port);
 
             if let Err(err) = server.await {
                 panic!("{:?}", err);
             }
+
+            stopped_tx.send(()).unwrap();
         });
     }
 
-    async fn stop(&mut self) {}
+    async fn stop(&mut self) {
+        let stop_tx = self.stop_sender.take().unwrap();
+
+        stop_tx.send(()).unwrap();
+
+        let stopped_rx = self.stopped_reciever.take().unwrap();
+
+        stopped_rx.await.unwrap();
+    }
 }

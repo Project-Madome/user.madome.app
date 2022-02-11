@@ -17,7 +17,7 @@ sai = "0.1"
 thiserror = "1.0"
 dotenv = "0.15"
 chrono = { version = "0.4", features = ["serde"] }
-log = "0.4.14"
+log = "0.4"
 simple_logger = "2.1"
 sea-orm = { version = "0.6", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros", "sqlx-chrono", "sqlx-uuid"], default-features = false }
 inspect = { git = "https://github.com/syrflover/inspect-rs" }

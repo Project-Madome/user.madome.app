@@ -7,10 +7,9 @@ pub use postgresql::*;
 
 use std::sync::Arc;
 
-use sai::{Component, ComponentLifecycle, Injected};
+use sai::{Component, Injected};
 
 #[derive(Component)]
-#[lifecycle]
 pub struct RepositorySet {
     #[cfg(not(test))]
     #[injected]
@@ -37,9 +36,4 @@ impl RepositorySet {
     pub fn like(&self) -> Arc<impl r#trait::LikeRepository> {
         Arc::clone(&self.like_repository)
     }
-}
-
-#[async_trait::async_trait]
-impl ComponentLifecycle for RepositorySet {
-    async fn start(&mut self) {}
 }

@@ -21,6 +21,10 @@ impl ComponentLifecycle for DatabaseSet {
 
         self.postgresql.replace(postgresql);
     }
+
+    async fn stop(&mut self) {
+        // log::info!("disconnect to database");
+    }
 }
 
 impl DatabaseSet {

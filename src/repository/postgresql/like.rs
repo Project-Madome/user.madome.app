@@ -1,7 +1,7 @@
 use sai::{Component, ComponentLifecycle, Injected};
 use sea_orm::{
-    sea_query::Expr, ColumnTrait, Condition, ConnectionTrait, DbErr, EntityTrait, FromQueryResult,
-    IdenStatic, PaginatorTrait, QueryFilter, QueryOrder, Statement, TryGetable,
+    ColumnTrait, Condition, ConnectionTrait, DbErr, EntityTrait, FromQueryResult, IdenStatic,
+    PaginatorTrait, QueryFilter, QueryOrder, Statement, TryGetable,
 };
 use uuid::Uuid;
 
