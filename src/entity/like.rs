@@ -1,11 +1,64 @@
-// get books -> blacklist of book from user ->
-//
-// article, user
-//
-//
-// 정보는 user에 저장할거긴함
-//
-// user에서 처리하게되면
-// endpoint가 /users/<user_id>/likes/books 이렇게 되나?
-// command로 book info 받아서 제공해야겠다
-// has book도 command로 검증
+use chrono::{DateTime, Utc};
+use uuid::Uuid;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum LikeKind {
+    Book,
+    BookTag,
+}
+
+#[cfg_attr(test, derive(PartialEq))]
+#[derive(Debug, Clone)]
+pub enum Like {
+    Book {
+        book_id: u32,
+        user_id: Uuid,
+        created_at: DateTime<Utc>,
+    },
+    BookTag {
+        tag_kind: String, // artist or series or female or male or misc ...
+        tag_name: String,
+        user_id: Uuid,
+        created_at: DateTime<Utc>,
+    },
+}
+
+impl Like {
+    pub fn book(user_id: Uuid, book_id: u32) -> Self {
+        Self::Book {
+            book_id,
+            user_id,
+            created_at: Utc::now(),
+        }
+    }
+
+    pub fn book_tag(user_id: Uuid, tag_kind: String, tag_name: String) -> Self {
+        Self::BookTag {
+            user_id,
+            tag_kind,
+            tag_name,
+            created_at: Utc::now(),
+        }
+    }
+
+    pub fn kind(&self) -> LikeKind {
+        match self {
+            Like::Book { .. } => LikeKind::Book,
+            Like::BookTag { .. } => LikeKind::BookTag,
+        }
+    }
+
+    pub fn user_id(&self) -> Uuid {
+        match self {
+            Like::Book { user_id, .. } => *user_id,
+            Like::BookTag { user_id, .. } => *user_id,
+        }
+    }
+
+    pub fn created_at(&self) -> DateTime<Utc> {
+        match self {
+            Like::Book { created_at, .. } => *created_at,
+            Like::BookTag { created_at, .. } => *created_at,
+        }
+    }
+}

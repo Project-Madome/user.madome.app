@@ -7,7 +7,7 @@ mod root_registry {
         app::{HttpServer, Resolver},
         config::Config,
         database::DatabaseSet,
-        repository::{PostgresqlUserRepository, RepositorySet},
+        repository::{PostgresqlLikeRepository, PostgresqlUserRepository, RepositorySet},
     };
 
     combine_component_registry!(
@@ -26,7 +26,12 @@ mod root_registry {
 
     component_registry!(
         RepositoryRegistry,
-        [DatabaseSet, RepositorySet, PostgresqlUserRepository]
+        [
+            DatabaseSet,
+            RepositorySet,
+            PostgresqlUserRepository,
+            PostgresqlLikeRepository
+        ]
     );
 
     // component_registry!(CommandRegistry, [CommandSet]);
@@ -41,7 +46,7 @@ pub mod tests {
     use crate::{
         app::{HttpServer, Resolver},
         config::Config,
-        repository::{InMemoryUserRepository, RepositorySet},
+        repository::{InMemoryLikeRepository, InMemoryUserRepository, RepositorySet},
     };
 
     combine_component_registry!(
@@ -59,7 +64,14 @@ pub mod tests {
 
     component_registry!(ControllerRegistry, [Resolver]);
 
-    component_registry!(RepositoryRegistry, [RepositorySet, InMemoryUserRepository]);
+    component_registry!(
+        RepositoryRegistry,
+        [
+            RepositorySet,
+            InMemoryUserRepository,
+            InMemoryLikeRepository
+        ]
+    );
 
     // component_registry!(CommandRegistry, [CommandSet]);
 

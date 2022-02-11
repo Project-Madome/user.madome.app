@@ -1,6 +1,8 @@
 use hyper::{Body, Response, StatusCode};
 
-use crate::usecase::{create_user, get_user};
+use crate::usecase::{
+    create_like, create_user, delete_like, get_likes, get_likes_from_book_tags, get_user,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -44,12 +46,23 @@ pub enum UseCaseError {
     GetUser(#[from] get_user::Error),
     #[error("CreateUser: {0}")]
     CreateUser(#[from] create_user::Error),
+    #[error("GetLikes: {0}")]
+    GetLikes(#[from] get_likes::Error),
+    #[error("CreateLike: {0}")]
+    CreateLike(#[from] create_like::Error),
+    #[error("DeleteLike: {0}")]
+    DeleteLike(#[from] delete_like::Error),
+    #[error("GetLikesFromBookTags")]
+    GetLikesFromBookTags(#[from] get_likes_from_book_tags::Error),
 }
 
 impl From<Error> for Response<Body> {
     fn from(error: Error) -> Self {
         use crate::msg::Error::*;
+        use create_like::Error::*;
         use create_user::Error::*;
+        use delete_like::Error::*;
+        use get_likes::Error::*;
         use get_user::Error::*;
         use Error::*;
         use UseCaseError::*;
@@ -71,13 +84,25 @@ impl From<Error> for Response<Body> {
                 .status(StatusCode::BAD_REQUEST)
                 .body(err.to_string().into()),
 
-            UseCase(CreateUser(AlreadyExistUser)) => response
+            UseCase(CreateUser(AlreadyExistsUser)) => response
                 .status(StatusCode::CONFLICT)
                 .body("Already exist user".into()),
 
             UseCase(GetUser(NotFoundUser)) => response
                 .status(StatusCode::NOT_FOUND)
                 .body("Not found user".into()),
+
+            UseCase(CreateLike(err @ AlreadyExistsLike)) => response
+                .status(StatusCode::CONFLICT)
+                .body(err.to_string().into()),
+
+            UseCase(GetLikes(err @ InvalidOffset(_))) => response
+                .status(StatusCode::BAD_REQUEST)
+                .body(err.to_string().into()),
+
+            UseCase(DeleteLike(err @ NotFoundLike)) => response
+                .status(StatusCode::NOT_FOUND)
+                .body(err.to_string().into()),
 
             AuthSdk(err) => err.to_http(response),
 

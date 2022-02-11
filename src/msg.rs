@@ -9,12 +9,14 @@ use util::{
         Cookie, SetHeaders,
     },
     r#async::AsyncTryFrom,
-    ReadChunks,
+    IntoPayload, ReadChunks,
 };
 
 use crate::{
     config::Config,
-    usecase::{create_user, get_user},
+    usecase::{
+        create_like, create_user, delete_like, get_likes, get_likes_from_book_tags, get_user,
+    },
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -31,8 +33,12 @@ pub enum Error {
 ///
 /// 실행되는 순서는 Resolver 참조
 pub enum Msg {
-    GetUser(get_user::Payload),
     CreateUser(create_user::Payload),
+    GetUser(get_user::Payload),
+    CreateLike(create_like::Payload),
+    GetLikes(get_likes::Payload),
+    DeleteLike(delete_like::Payload),
+    GetLikesFromBookTags(get_likes_from_book_tags::Payload),
 }
 
 impl Msg {
@@ -70,10 +76,41 @@ impl Msg {
                     .await?;
 
                 let p = get_user::Payload {
-                    id_or_email: r.user_id,
+                    id_or_email: r.user_id.to_string(),
                 };
 
                 (Some(maybe_token_pair), Msg::GetUser(p))
+            }
+
+            (Method::POST, "/users/@me/likes") => {
+                let (r, maybe_token_pair) = auth
+                    .check_and_refresh_token_pair(access_token, refresh_token, Normal)
+                    .await?;
+
+                let mut p: create_like::Payload = Wrap::async_try_from(request).await?.inner();
+                p.set_user_id(r.user_id);
+
+                (Some(maybe_token_pair), Msg::CreateLike(p))
+            }
+
+            (Method::GET, "/users/@me/likes") => {
+                let (r, maybe_token_pair) = auth
+                    .check_and_refresh_token_pair(access_token, refresh_token, Normal)
+                    .await?;
+
+                let p = request.into_payload(r.user_id).await?;
+
+                (Some(maybe_token_pair), Msg::GetLikes(p))
+            }
+
+            (Method::DELETE, "/users/@me/likes") => {
+                let (r, maybe_token_pair) = auth
+                    .check_and_refresh_token_pair(access_token, refresh_token, Normal)
+                    .await?;
+
+                let p = request.into_payload(r.user_id).await?;
+
+                (Some(maybe_token_pair), Msg::DeleteLike(p))
             }
 
             /* Internal */
@@ -84,6 +121,14 @@ impl Msg {
                     PathVariable::from((path, "/users/:user_id_or_email")).into();
 
                 (None, Msg::GetUser(p))
+            }
+
+            (Method::GET, "/users/likes/book-tags") => {
+                auth.check_internal(request.headers())?;
+
+                let p = request.try_into()?;
+
+                (None, Msg::GetLikesFromBookTags(p))
             }
 
             _ => return Err(Error::NotFound.into()),

@@ -14,7 +14,9 @@ use crate::config::Config;
 use crate::model::{Model, Presenter};
 use crate::msg::Msg;
 use crate::repository::RepositorySet;
-use crate::usecase::{create_user, get_user};
+use crate::usecase::{
+    create_like, create_user, delete_like, get_likes, get_likes_from_book_tags, get_user,
+};
 
 #[derive(Component)]
 pub struct Resolver {
@@ -37,6 +39,18 @@ impl Resolver {
             Msg::CreateUser(payload) => create_user::execute(payload, repository).await?.into(),
 
             Msg::GetUser(payload) => get_user::execute(payload, repository).await?.into(),
+
+            Msg::CreateLike(payload) => create_like::execute(payload, repository).await?.into(),
+
+            Msg::GetLikes(payload) => get_likes::execute(payload, repository).await?.into(),
+
+            Msg::DeleteLike(payload) => delete_like::execute(payload, repository).await?.into(),
+
+            Msg::GetLikesFromBookTags(payload) => {
+                get_likes_from_book_tags::execute(payload, repository)
+                    .await?
+                    .into()
+            }
         };
 
         Ok(model)
@@ -141,23 +155,3 @@ impl ComponentLifecycle for HttpServer {
 
     async fn stop(&mut self) {}
 }
-
-/* pub async fn app(request: Request<Body>) -> crate::Result<Response<Body>> {
-    /* let app = tower::service_fn(|request: Request<Body>| async move {
-        let msg = Msg::from(&request);
-
-        let model = resolve(msg).await;
-
-        let response = present(model).await;
-
-        response
-    }); */
-
-    let msg = Msg::try_from(request).await?;
-
-    let model = resolve(msg).await?;
-
-    let response = model.present()?;
-
-    Ok(response)
-} */

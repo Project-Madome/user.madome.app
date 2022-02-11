@@ -56,7 +56,7 @@ pub enum Error {
     InvalidRole(number::Error<u8>),
 
     #[error("Already exist error")]
-    AlreadyExistUser,
+    AlreadyExistsUser,
 }
 
 impl From<Error> for crate::Error {
@@ -74,6 +74,6 @@ pub async fn execute(p: Payload, repository: Arc<RepositorySet>) -> crate::Resul
 
     match maybe_saved {
         Some(_user) => Ok(Model),
-        None => Err(Error::AlreadyExistUser.into()),
+        None => Err(Error::AlreadyExistsUser.into()),
     }
 }

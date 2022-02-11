@@ -19,11 +19,23 @@ pub struct RepositorySet {
     #[cfg(test)]
     #[injected]
     user_repository: Injected<InMemoryUserRepository>,
+
+    #[cfg(not(test))]
+    #[injected]
+    like_repository: Injected<PostgresqlLikeRepository>,
+
+    #[cfg(test)]
+    #[injected]
+    like_repository: Injected<InMemoryLikeRepository>,
 }
 
 impl RepositorySet {
     pub fn user(&self) -> Arc<impl r#trait::UserRepository> {
         Arc::clone(&self.user_repository)
+    }
+
+    pub fn like(&self) -> Arc<impl r#trait::LikeRepository> {
+        Arc::clone(&self.like_repository)
     }
 }
 
