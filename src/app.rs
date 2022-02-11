@@ -164,7 +164,7 @@ impl ComponentLifecycle for HttpServer {
             log::info!("started http server: 0.0.0.0:{}", port);
 
             if let Err(err) = server.await {
-                panic!("{:?}", err);
+                log::error!("{:?}", err);
             }
 
             stopped_tx.send(()).unwrap();
