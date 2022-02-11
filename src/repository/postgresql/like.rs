@@ -37,7 +37,6 @@ impl LikeRepository for PostgresqlLikeRepository {
         offset: usize,
         page: usize,
         sort_by: LikeSortBy,
-        // TODO: enum SortBy { CreatedAt, Random }
     ) -> crate::Result<Vec<Like>> {
         let likes = match kind {
             Some(LikeKind::Book) => {
