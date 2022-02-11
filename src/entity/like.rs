@@ -1,10 +1,24 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
+use super::Sort;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum LikeKind {
     Book,
     BookTag,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum LikeSortBy {
+    CreatedAt(Sort),
+    Random,
+}
+
+impl Default for LikeSortBy {
+    fn default() -> Self {
+        Self::CreatedAt(Sort::Desc)
+    }
 }
 
 #[cfg_attr(test, derive(PartialEq))]

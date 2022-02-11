@@ -7,7 +7,7 @@ use util::{
 use uuid::Uuid;
 
 use crate::{
-    entity::LikeKind,
+    entity::{like::LikeSortBy, LikeKind, Sort},
     error::UseCaseError,
     model,
     repository::{r#trait::LikeRepository, RepositorySet},
@@ -19,6 +19,7 @@ pub struct Payload {
     pub user_id: Uuid,
     pub offset: usize,
     pub page: usize,
+    pub sort_by: LikeSortBy,
 }
 
 impl Payload {
@@ -33,6 +34,7 @@ impl Payload {
                 .take()
                 .map_err(Error::InvalidOffset)?,
             page: self.page,
+            sort_by: self.sort_by,
         })
     }
 }
@@ -46,11 +48,11 @@ impl FromRequest for Payload {
         user_id: Self::Parameter,
         request: Request<hyper::Body>,
     ) -> Result<Self, Self::Error> {
-        let qs = querystring::querify(request.uri().query().unwrap_or_default())
+        let mut qs = querystring::querify(request.uri().query().unwrap_or_default())
             .into_iter()
             .collect::<HashMap<_, _>>();
 
-        let kind = match *qs.get("kind").unwrap_or(&"") {
+        let kind = match qs.remove("kind").unwrap_or("") {
             "book" => Some(LikeKind::Book),
             "book-tag" => Some(LikeKind::BookTag),
             _ => None,
@@ -60,11 +62,21 @@ impl FromRequest for Payload {
 
         let page = qs.get("page").and_then(|x| x.parse().ok()).unwrap_or(1);
 
+        let sort_by = match qs.remove("sort-by").unwrap_or("created-at-desc") {
+            "created-at-desc" => LikeSortBy::CreatedAt(Sort::Desc),
+            "created-at-asc" => LikeSortBy::CreatedAt(Sort::Asc),
+            "random" => LikeSortBy::Random,
+            x => return Err(Error::InvalidSortBy(x.to_string()).into()),
+        };
+
+        log::debug!("sort-by = {sort_by:?}");
+
         Ok(Self {
             kind,
             user_id,
             offset,
             page,
+            sort_by,
         })
     }
 }
@@ -75,6 +87,8 @@ pub type Model = Vec<model::Like>;
 pub enum Error {
     #[error("offset: {0}")]
     InvalidOffset(number::Error<usize>),
+    #[error("sort-by: ")]
+    InvalidSortBy(String),
 }
 
 impl From<Error> for crate::Error {
@@ -89,11 +103,12 @@ pub async fn execute(p: Payload, repository: Arc<RepositorySet>) -> crate::Resul
         user_id,
         offset,
         page,
+        sort_by,
     } = p.validate()?;
 
     let r = repository
         .like()
-        .get_many(user_id, kind, offset, page)
+        .get_many(user_id, kind, offset, page, sort_by)
         .await?;
 
     Ok(r.into_iter().map(Into::into).collect())

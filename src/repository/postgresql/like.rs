@@ -3,12 +3,13 @@ use sea_orm::{
     ColumnTrait, Condition, ConnectionTrait, DbErr, EntityTrait, FromQueryResult, IdenStatic,
     PaginatorTrait, QueryFilter, QueryOrder, Statement, TryGetable,
 };
+use util::sea_orm::OrderByRandom;
 use uuid::Uuid;
 
 use crate::{
     constant::postgresql,
     database::{postgresql::entity::like, DatabaseSet},
-    entity::{Like, LikeKind},
+    entity::{like::LikeSortBy, Like, LikeKind, Sort},
     repository::r#trait::LikeRepository,
 };
 
@@ -35,35 +36,61 @@ impl LikeRepository for PostgresqlLikeRepository {
         kind: Option<LikeKind>,
         offset: usize,
         page: usize,
+        sort_by: LikeSortBy,
+        // TODO: enum SortBy { CreatedAt, Random }
     ) -> crate::Result<Vec<Like>> {
         let likes = match kind {
             Some(LikeKind::Book) => {
-                let r = like::book::Entity::find()
-                    .order_by_desc(like::book::Column::CreatedAt)
-                    .filter(like::book::Column::UserId.eq(user_id))
-                    /* .query()
-                    .offset(offset * (page - 1))
-                    .limit(offset) */
-                    .paginate(self.database.postgresql(), offset)
-                    .fetch_page(page - 1)
-                    .await?;
+                let select = like::book::Entity::find();
+                let r = match sort_by {
+                    LikeSortBy::Random => select.order_by_random(),
+                    LikeSortBy::CreatedAt(Sort::Desc) => {
+                        select.order_by_desc(like::book::Column::CreatedAt)
+                    }
+                    LikeSortBy::CreatedAt(Sort::Asc) => {
+                        select.order_by_asc(like::book::Column::CreatedAt)
+                    }
+                }
+                .filter(like::book::Column::UserId.eq(user_id))
+                /* .query()
+                .offset(offset * (page - 1))
+                .limit(offset) */
+                .paginate(self.database.postgresql(), offset) // case1
+                .fetch_page(page - 1) // case2
+                .await?;
 
                 r.into_iter().map(Into::into).collect()
             }
 
             Some(LikeKind::BookTag) => {
-                let r = like::book_tag::Entity::find()
-                    .order_by_desc(like::book_tag::Column::CreatedAt)
-                    .filter(like::book_tag::Column::UserId.eq(user_id))
-                    .paginate(self.database.postgresql(), offset)
-                    .fetch_page(page - 1)
-                    .await?;
+                let select = like::book_tag::Entity::find();
+                let r = match sort_by {
+                    LikeSortBy::Random => select.order_by_random(),
+                    LikeSortBy::CreatedAt(Sort::Desc) => {
+                        select.order_by_desc(like::book_tag::Column::CreatedAt)
+                    }
+                    LikeSortBy::CreatedAt(Sort::Asc) => {
+                        select.order_by_asc(like::book_tag::Column::CreatedAt)
+                    }
+                }
+                .order_by_desc(like::book_tag::Column::CreatedAt)
+                .filter(like::book_tag::Column::UserId.eq(user_id))
+                .paginate(self.database.postgresql(), offset)
+                .fetch_page(page - 1)
+                .await?;
 
                 r.into_iter().map(Into::into).collect()
             }
 
             None => {
-                let query = r#"
+                let sort_by = match sort_by {
+                    LikeSortBy::CreatedAt(Sort::Desc) => "created_at DESC",
+                    LikeSortBy::CreatedAt(Sort::Asc) => "created_at ASC",
+                    LikeSortBy::Random => "RANDOM() DESC",
+                };
+
+                let query = format!(
+                    r#"
                 SELECT * FROM
                 (
                     SELECT id, user_id, book_id, NULL AS tag_kind, NULL AS tag_name, created_at
@@ -74,7 +101,8 @@ impl LikeRepository for PostgresqlLikeRepository {
                         FROM likes_book_tag
                         WHERE user_id = $1
                 ) AS a
-                ORDER BY created_at DESC"#;
+                ORDER BY {sort_by}"#,
+                );
 
                 let db = self.database.postgresql();
                 let psql = db.get_database_backend();
@@ -82,7 +110,7 @@ impl LikeRepository for PostgresqlLikeRepository {
                 let query_results = db
                     .query_all(Statement::from_sql_and_values(
                         psql,
-                        query,
+                        &query,
                         [user_id.into()],
                     ))
                     .await?;

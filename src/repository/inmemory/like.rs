@@ -5,7 +5,7 @@ use sai::Component;
 use uuid::Uuid;
 
 use crate::{
-    entity::{Like, LikeKind},
+    entity::{like::LikeSortBy, Like, LikeKind, Sort},
     repository::r#trait::LikeRepository,
 };
 
@@ -23,6 +23,7 @@ impl LikeRepository for InMemoryLikeRepository {
         kind: Option<LikeKind>,
         offset: usize,
         page: usize,
+        sort_by: LikeSortBy,
     ) -> crate::Result<Vec<Like>> {
         let inner = self.inner.read().unwrap();
 
@@ -36,14 +37,23 @@ impl LikeRepository for InMemoryLikeRepository {
 
         match inner.get(&user_id) {
             Some(r) => {
-                let r = r
-                    .iter()
-                    .filter(filter_by_kind)
-                    .sorted_by(|a, b| b.created_at().cmp(&a.created_at()))
-                    .skip(offset * (page - 1))
-                    .take(offset)
-                    .cloned()
-                    .collect();
+                let r = r.iter().filter(filter_by_kind);
+
+                let r = match sort_by {
+                    LikeSortBy::CreatedAt(Sort::Desc) => {
+                        r.sorted_by(|a, b| b.created_at().cmp(&a.created_at()))
+                    }
+                    LikeSortBy::CreatedAt(Sort::Asc) => {
+                        r.sorted_by(|a, b| a.created_at().cmp(&b.created_at()))
+                    }
+                    LikeSortBy::Random => unimplemented!(
+                        "unimplemented sort by random in InMemoryLikeRepository::get_many()"
+                    ),
+                }
+                .skip(offset * (page - 1))
+                .take(offset)
+                .cloned()
+                .collect();
 
                 Ok(r)
             }
@@ -177,7 +187,7 @@ pub mod get_many {
     use uuid::Uuid;
 
     use crate::{
-        entity::{Like, LikeKind},
+        entity::{like::LikeSortBy, Like, LikeKind, Sort},
         repository::r#trait::LikeRepository,
     };
 
@@ -257,7 +267,7 @@ pub mod get_many {
         },
         {
             // Book
-            let r = repository.get_many(user_id, Some(LikeKind::Book), 25, 1).await.unwrap();
+            let r = repository.get_many(user_id, Some(LikeKind::Book), 25, 1, LikeSortBy::CreatedAt(Sort::Desc)).await.unwrap();
             let e = likes
                 .iter()
                 .filter(|x| x.user_id() == user_id)
@@ -270,7 +280,7 @@ pub mod get_many {
             assert_eq!(r, e, "{user_id}");
 
             // BookTag
-            let r = repository.get_many(user_id, Some(LikeKind::BookTag), 25, 1).await.unwrap();
+            let r = repository.get_many(user_id, Some(LikeKind::BookTag), 25, 1, LikeSortBy::CreatedAt(Sort::Desc)).await.unwrap();
             let e = likes
                 .iter()
                 .filter(|x| x.user_id() == user_id)
@@ -283,7 +293,7 @@ pub mod get_many {
             assert_eq!(r, e);
 
             // All
-            let r = repository.get_many(user_id, None, 75, 1).await.unwrap();
+            let r = repository.get_many(user_id, None, 75, 1, LikeSortBy::CreatedAt(Sort::Desc)).await.unwrap();
             let e = likes
                 .iter()
                 .filter(|x| x.user_id() == user_id)
