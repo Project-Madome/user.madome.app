@@ -30,10 +30,16 @@ impl Payload {
             offset: self
                 .offset
                 .validate()
-                .max(25)
+                .min(1)
+                .max(100)
                 .take()
                 .map_err(Error::InvalidOffset)?,
-            page: self.page,
+            page: self
+                .page
+                .validate()
+                .min(1)
+                .take()
+                .map_err(Error::InvalidPage)?,
             sort_by: self.sort_by,
         })
     }
@@ -83,10 +89,13 @@ impl FromRequest for Payload {
 
 pub type Model = Vec<model::Like>;
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("offset: {0}")]
     InvalidOffset(number::Error<usize>),
+    #[error("page: {0}")]
+    InvalidPage(number::Error<usize>),
     #[error("sort-by: ")]
     InvalidSortBy(String),
 }
