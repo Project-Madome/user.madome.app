@@ -1,7 +1,7 @@
 use sai::{Component, ComponentLifecycle, Injected};
 use sea_orm::{
-    ColumnTrait, ConnectionTrait, DbErr, EntityName, EntityTrait, IdenStatic, QueryFilter,
-    QueryOrder, QuerySelect, Statement, TransactionTrait,
+    prelude::DateTimeUtc, ConnectionTrait, DbErr, EntityName, IdenStatic, Statement,
+    TransactionTrait,
 };
 use uuid::Uuid;
 
@@ -42,8 +42,15 @@ impl NotificationRepository for PostgresqlNotificationRepository {
             _ => {}
         }; */
 
-        let select =
+        // TODO: https://github.com/SeaQL/sea-orm/issues/529
+        /* let select =
             notification::book::Entity::find().find_with_related(notification::book::tag::Entity);
+
+        {
+            let a = select.as_query();
+
+            log::debug!("{a:#?}");
+        }
 
         let r = match sort_by {
             NotificationSortBy::CreatedAt(Sort::Desc) => {
@@ -57,11 +64,86 @@ impl NotificationRepository for PostgresqlNotificationRepository {
         .limit(offset as u64)
         .offset((offset * (page - 1)) as u64)
         .all(self.database.postgresql())
-        .await?;
+        .await?; */
+
+        let sort_by = match sort_by {
+            NotificationSortBy::CreatedAt(Sort::Desc) => {
+                r#""notifications_book"."created_at" DESC"#
+            }
+            NotificationSortBy::CreatedAt(Sort::Asc) => r#""notifications_book"."created_at" ASC"#,
+        };
+
+        let query = format!(
+            r#"
+            SELECT
+                "notifications_book"."id" AS "A_id",
+                "notifications_book"."book_id" AS "A_book_id",
+                "notifications_book"."user_id" AS "A_user_id",
+                "notifications_book"."created_at" AS "A_created_at",
+                "notifications_book_tag"."id" AS "B_id",
+                "notifications_book_tag"."notification_book_id" AS "B_notification_book_id",
+                "notifications_book_tag"."tag_kind" AS "B_tag_kind",
+                "notifications_book_tag"."tag_name" AS "B_tag_name"
+            FROM
+                "notifications_book"
+                LEFT JOIN "notifications_book_tag"
+                    ON "notifications_book"."id" = "notifications_book_tag"."notification_book_id"
+            WHERE
+                "notifications_book"."user_id" = $1
+            ORDER BY
+                {sort_by}
+            LIMIT $2
+            OFFSET $3"#
+        );
+
+        let db = self.database.postgresql();
+        let psql = db.get_database_backend();
+
+        let r = db
+            .query_all(Statement::from_sql_and_values(
+                psql,
+                &query,
+                [
+                    user_id.into(),
+                    (offset as u64).into(),
+                    ((offset * (page - 1)) as u64).into(),
+                ],
+            ))
+            .await?;
+
+        let mut xs = Vec::with_capacity(offset);
+
+        for query_result in r {
+            let a = notification::book::Model {
+                id: query_result.try_get::<Uuid>("", "A_id")?,
+                book_id: query_result.try_get::<i32>("", "A_book_id")?,
+                user_id: query_result.try_get::<Uuid>("", "A_user_id")?,
+                created_at: query_result.try_get::<DateTimeUtc>("", "A_created_at")?,
+            };
+
+            let b = notification::book::tag::Model {
+                id: query_result.try_get::<Uuid>("", "B_id")?,
+                notification_book_id: query_result.try_get::<Uuid>("", "B_notification_book_id")?,
+                tag_kind: query_result.try_get::<String>("", "B_tag_kind")?,
+                tag_name: query_result.try_get::<String>("", "B_tag_name")?,
+            };
+
+            if xs.is_empty() {
+                xs.push((a, vec![b]));
+            } else {
+                let (left, right) = xs.last_mut().unwrap();
+
+                if left.id == a.id {
+                    right.push(b);
+                } else {
+                    xs.push((a, vec![b]));
+                }
+            }
+        }
 
         // log::debug!("{r:#?}");
 
-        Ok(r.into_iter().map(Into::into).collect())
+        Ok(xs.into_iter().map(Into::into).collect())
     }
 
     async fn add_many(
