@@ -26,6 +26,9 @@ pub struct RepositorySet {
     #[cfg(test)]
     #[injected]
     like_repository: Injected<InMemoryLikeRepository>,
+
+    #[injected]
+    notification_repository: Injected<PostgresqlNotificationRepository>,
 }
 
 impl RepositorySet {
@@ -35,5 +38,9 @@ impl RepositorySet {
 
     pub fn like(&self) -> Arc<impl r#trait::LikeRepository> {
         Arc::clone(&self.like_repository)
+    }
+
+    pub fn notification(&self) -> Arc<impl r#trait::NotificationRepository> {
+        Arc::clone(&self.notification_repository)
     }
 }

@@ -11,7 +11,8 @@ use util::{
 };
 
 use crate::usecase::{
-    create_like, create_user, delete_like, get_likes, get_likes_from_book_tags, get_user,
+    create_like, create_notifications, create_user, delete_like, get_likes,
+    get_likes_from_book_tags, get_notifications, get_user,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -30,10 +31,14 @@ pub enum Error {
 pub enum Msg {
     CreateUser(create_user::Payload),
     GetUser(get_user::Payload),
+
     CreateLike(create_like::Payload),
     GetLikes(get_likes::Payload),
     DeleteLike(delete_like::Payload),
     GetLikesFromBookTags(get_likes_from_book_tags::Payload),
+
+    CreateNotifications(create_notifications::Payload),
+    GetNotifications(get_notifications::Payload),
 }
 
 impl Msg {
@@ -53,20 +58,20 @@ impl Msg {
 
         let auth = Auth::new(&madome_auth_url);
 
-        let (r, msg) = match (method, path) {
+        let (maybe_token_pair, msg) = match (method, path) {
             /* Public */
             (Method::POST, "/users") => {
-                let (_, maybe_token_pair) = auth
+                let (_, token_pair) = auth
                     .check_and_refresh_token_pair(access_token, refresh_token, Developer)
                     .await?;
 
                 let p = Wrap::async_try_from(request).await?.inner();
 
-                (Some(maybe_token_pair), Msg::CreateUser(p))
+                (Some(token_pair), Msg::CreateUser(p))
             }
 
             (Method::GET, "/users/@me") => {
-                let (r, maybe_token_pair) = auth
+                let (r, token_pair) = auth
                     .check_and_refresh_token_pair(access_token, refresh_token, Normal)
                     .await?;
 
@@ -74,38 +79,48 @@ impl Msg {
                     id_or_email: r.user_id.to_string(),
                 };
 
-                (Some(maybe_token_pair), Msg::GetUser(p))
+                (Some(token_pair), Msg::GetUser(p))
             }
 
             (Method::POST, "/users/@me/likes") => {
-                let (r, maybe_token_pair) = auth
+                let (r, token_pair) = auth
                     .check_and_refresh_token_pair(access_token, refresh_token, Normal)
                     .await?;
 
                 let mut p: create_like::Payload = Wrap::async_try_from(request).await?.inner();
                 p.set_user_id(r.user_id);
 
-                (Some(maybe_token_pair), Msg::CreateLike(p))
+                (Some(token_pair), Msg::CreateLike(p))
             }
 
             (Method::GET, "/users/@me/likes") => {
-                let (r, maybe_token_pair) = auth
+                let (r, token_pair) = auth
                     .check_and_refresh_token_pair(access_token, refresh_token, Normal)
                     .await?;
 
                 let p = request.into_payload(r.user_id).await?;
 
-                (Some(maybe_token_pair), Msg::GetLikes(p))
+                (Some(token_pair), Msg::GetLikes(p))
             }
 
             (Method::DELETE, "/users/@me/likes") => {
-                let (r, maybe_token_pair) = auth
+                let (r, token_pair) = auth
                     .check_and_refresh_token_pair(access_token, refresh_token, Normal)
                     .await?;
 
                 let p = request.into_payload(r.user_id).await?;
 
-                (Some(maybe_token_pair), Msg::DeleteLike(p))
+                (Some(token_pair), Msg::DeleteLike(p))
+            }
+
+            (Method::GET, "/users/@me/notifications") => {
+                let (r, token_pair) = auth
+                    .check_and_refresh_token_pair(access_token, refresh_token, Normal)
+                    .await?;
+
+                let p = request.into_payload(r.user_id).await?;
+
+                (Some(token_pair), Msg::GetNotifications(p))
             }
 
             /* Internal */
@@ -126,10 +141,18 @@ impl Msg {
                 (None, Msg::GetLikesFromBookTags(p))
             }
 
+            (Method::POST, "/users/notifications") => {
+                auth.check_internal(request.headers())?;
+
+                let p = Wrap::async_try_from(request).await?.inner();
+
+                (None, Msg::CreateNotifications(p))
+            }
+
             _ => return Err(Error::NotFound.into()),
         };
 
-        if let Some(set_cookie) = r {
+        if let Some(set_cookie) = maybe_token_pair {
             // response에 쿠키 설정하고 response 넘겨줌
             response = response.headers(set_cookie.iter());
         }

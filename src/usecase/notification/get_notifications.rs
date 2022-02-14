@@ -1,6 +1,7 @@
-use hyper::Request;
-use serde::Deserialize;
 use std::sync::Arc;
+
+use hyper::{Body, Request};
+use serde::Deserialize;
 use util::{validate::ValidatorNumberExt, FromRequest};
 use uuid::Uuid;
 
@@ -9,9 +10,9 @@ use crate::{
     model,
     payload::{
         self,
-        like::{LikeKind, LikeSortBy},
+        notification::{NotificationKind, NotificationSortBy},
     },
-    repository::{r#trait::LikeRepository, RepositorySet},
+    repository::{r#trait::NotificationRepository, RepositorySet},
 };
 
 #[cfg_attr(test, derive(PartialEq))]
@@ -20,10 +21,10 @@ use crate::{
 pub struct Payload {
     #[serde(default)]
     pub user_id: Uuid,
-    pub kind: Option<LikeKind>,
+    pub kind: Option<NotificationKind>,
     pub offset: Option<usize>,
     pub page: Option<usize>,
-    pub sort_by: Option<LikeSortBy>,
+    pub sort_by: Option<NotificationSortBy>,
 }
 
 impl Payload {
@@ -50,7 +51,7 @@ impl Payload {
             kind: self.kind,
             offset: Some(offset),
             page: Some(page),
-            sort_by: Some(self.sort_by.unwrap_or(LikeSortBy::CreatedAtDesc)),
+            sort_by: Some(self.sort_by.unwrap_or(NotificationSortBy::CreatedAtDesc)),
         })
     }
 }
@@ -62,10 +63,10 @@ impl FromRequest for Payload {
 
     async fn from_request(
         user_id: Self::Parameter,
-        request: Request<hyper::Body>,
+        request: Request<Body>,
     ) -> Result<Self, Self::Error> {
         let qs = request.uri().query().unwrap_or_default();
-        let payload: Self =
+        let payload: Payload =
             serde_qs::from_str(qs).map_err(payload::Error::QuerystringDeserialize)?;
 
         Ok(Self {
@@ -75,7 +76,7 @@ impl FromRequest for Payload {
     }
 }
 
-pub type Model = Vec<model::Like>;
+pub type Model = Vec<model::Notification>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {}
@@ -86,17 +87,18 @@ impl From<Error> for crate::Error {
     }
 }
 
-pub async fn execute(p: Payload, repository: Arc<RepositorySet>) -> crate::Result<Model> {
-    let Payload {
-        kind,
+pub async fn execute(
+    Payload {
         user_id,
+        kind,
         offset,
         page,
         sort_by,
-    } = p.check()?;
-
-    let r = repository
-        .like()
+    }: Payload,
+    repository: Arc<RepositorySet>,
+) -> crate::Result<Model> {
+    let notifications = repository
+        .notification()
         .get_many(
             user_id,
             kind.map(Into::into),
@@ -106,7 +108,7 @@ pub async fn execute(p: Payload, repository: Arc<RepositorySet>) -> crate::Resul
         )
         .await?;
 
-    Ok(r.into_iter().map(Into::into).collect())
+    Ok(notifications.into_iter().map(Into::into).collect())
 }
 
 #[cfg(test)]
@@ -115,7 +117,7 @@ mod payload_tests {
     use util::IntoPayload;
     use uuid::Uuid;
 
-    use crate::payload::like::{LikeKind, LikeSortBy};
+    use crate::payload::notification::{NotificationKind, NotificationSortBy};
 
     use super::Payload;
 
@@ -134,7 +136,7 @@ mod payload_tests {
         let expected = Payload {
             offset: Some(25),
             page: Some(1),
-            sort_by: Some(LikeSortBy::CreatedAtDesc),
+            sort_by: Some(NotificationSortBy::CreatedAtDesc),
             kind: None,
             user_id: USER_ID,
         };
@@ -144,15 +146,15 @@ mod payload_tests {
 
     #[tokio::test]
     async fn inject() {
-        let request = request("/?offset=17&page=11&sort-by=created-at-asc&kind=book");
+        let request = request("/?offset=11&page=3&sort-by=created-at-asc&kind=book");
 
         let payload: Payload = request.into_payload(USER_ID).await.unwrap();
 
         let expected = Payload {
-            offset: Some(17),
-            page: Some(11),
-            sort_by: Some(LikeSortBy::CreatedAtAsc),
-            kind: Some(LikeKind::Book),
+            offset: Some(11),
+            page: Some(3),
+            sort_by: Some(NotificationSortBy::CreatedAtAsc),
+            kind: Some(NotificationKind::Book),
             user_id: USER_ID,
         };
 

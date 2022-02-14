@@ -1,4 +1,3 @@
-use chrono::{FixedOffset, Utc};
 use sea_orm::{
     entity::prelude::*,
     sea_query::{ColumnDef, Table},
@@ -18,18 +17,12 @@ pub struct Model {
     pub email: String,
     #[sea_orm(column_type = "SmallInteger")]
     pub role: i16,
-    pub created_at: DateTimeWithTimeZone,
-    pub updated_at: DateTimeWithTimeZone,
+    pub created_at: DateTimeUtc,
+    pub updated_at: DateTimeUtc,
 }
 
-#[derive(Copy, Clone, Debug, EnumIter)]
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {}
-
-impl RelationTrait for Relation {
-    fn def(&self) -> RelationDef {
-        panic!("No RelationDef")
-    }
-}
 
 impl ActiveModelBehavior for ActiveModel {}
 
@@ -49,8 +42,8 @@ impl From<Model> for User {
             name,
             email,
             role: (role as u8).into(),
-            created_at: created_at.with_timezone(&Utc),
-            updated_at: updated_at.with_timezone(&Utc),
+            created_at,
+            updated_at,
         }
     }
 }
@@ -68,8 +61,6 @@ impl From<User> for ActiveModel {
     ) -> Self {
         use sea_orm::ActiveValue::*;
 
-        let utc = FixedOffset::east(0);
-
         let role: u8 = role.into();
 
         Self {
@@ -77,8 +68,8 @@ impl From<User> for ActiveModel {
             name: Set(name),
             email: Set(email),
             role: Set(role as i16),
-            created_at: Set(created_at.with_timezone(&utc)),
-            updated_at: Set(updated_at.with_timezone(&utc)),
+            created_at: Set(created_at),
+            updated_at: Set(updated_at),
         }
     }
 }

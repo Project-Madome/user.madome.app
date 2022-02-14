@@ -24,6 +24,7 @@ inspect = { git = "https://github.com/syrflover/inspect-rs" }
 openssl = { version = "0.10", features = ["vendored"] }
 itertools = "0.10"
 querystring = "1.1"
+serde_qs = "0.8"
 util = { path = "../util" }
 madome-sdk = { path = "../madome-sdk", features = ["server"] }
 

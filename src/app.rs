@@ -17,7 +17,8 @@ use crate::model::{Model, Presenter};
 use crate::msg::Msg;
 use crate::repository::RepositorySet;
 use crate::usecase::{
-    create_like, create_user, delete_like, get_likes, get_likes_from_book_tags, get_user,
+    create_like, create_notifications, create_user, delete_like, get_likes,
+    get_likes_from_book_tags, get_notifications, get_user,
 };
 
 #[derive(Component)]
@@ -53,6 +54,14 @@ impl Resolver {
                     .await?
                     .into()
             }
+
+            Msg::CreateNotifications(payload) => create_notifications::execute(payload, repository)
+                .await?
+                .into(),
+
+            Msg::GetNotifications(payload) => get_notifications::execute(payload, repository)
+                .await?
+                .into(),
         };
 
         Ok(model)

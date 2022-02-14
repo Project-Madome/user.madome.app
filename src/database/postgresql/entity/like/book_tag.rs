@@ -1,4 +1,3 @@
-use chrono::{FixedOffset, Utc};
 use sea_orm::sea_query::{ForeignKey, ForeignKeyAction, Table};
 use sea_orm::ConnectionTrait;
 use sea_orm::{prelude::*, sea_query::ColumnDef, DeriveEntityModel, DeriveRelation, EnumIter};
@@ -15,7 +14,7 @@ pub struct Model {
     pub tag_kind: String,
     pub tag_name: String,
     pub user_id: Uuid,
-    pub created_at: DateTimeWithTimeZone,
+    pub created_at: DateTimeUtc,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -45,7 +44,7 @@ impl From<Model> for Like {
             tag_kind,
             tag_name,
             user_id,
-            created_at: created_at.with_timezone(&Utc),
+            created_at,
         }
     }
 }
@@ -66,14 +65,12 @@ impl From<Like> for ActiveModel {
                     Uuid::new_v5(&Uuid::NAMESPACE_OID, x.as_bytes())
                 };
 
-                let utc = FixedOffset::east(0);
-
                 Self {
                     id: Set(id),
                     tag_kind: Set(tag_kind),
                     tag_name: Set(tag_name),
                     user_id: Set(user_id),
-                    created_at: Set(created_at.with_timezone(&utc)),
+                    created_at: Set(created_at),
                 }
             }
             _ => unreachable!(),
@@ -82,7 +79,7 @@ impl From<Like> for ActiveModel {
 }
 
 pub async fn create_table(db: &DatabaseConnection) {
-    let smtm = Table::create()
+    let stmt = Table::create()
         .table(Entity)
         .if_not_exists()
         .col(ColumnDef::new(Column::Id).uuid().primary_key())
@@ -96,15 +93,15 @@ pub async fn create_table(db: &DatabaseConnection) {
         )
         .foreign_key(
             ForeignKey::create()
-                .name("user_id")
-                .from(entity::like::book_tag::Entity, Column::UserId)
+                .name(Column::UserId.as_str())
+                .from(Entity, Column::UserId)
                 .to(entity::user::Entity, entity::user::Column::Id)
                 .on_delete(ForeignKeyAction::Cascade),
         )
         .to_owned();
 
     let builder = db.get_database_backend();
-    db.execute(builder.build(&smtm))
+    db.execute(builder.build(&stmt))
         .await
         .expect("create entity::like::book_tag table");
 }

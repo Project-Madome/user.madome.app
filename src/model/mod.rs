@@ -1,22 +1,28 @@
 mod like;
+mod notification;
 mod user;
 
 pub use like::Like;
+pub use notification::Notification;
 pub use user::User;
 
 use hyper::{http::response::Builder as ResponseBuilder, Body, Response, StatusCode};
 
 use crate::{
     into_model, model,
-    usecase::{create_like, create_user, delete_like},
+    usecase::{create_like, create_notifications, create_user, delete_like},
 };
 
 into_model![
     (User, model::User),
     (CreateUser, create_user::Model),
+    //
     (Likes, Vec<model::Like>),
     (CreateLike, create_like::Model),
     (DeleteLike, delete_like::Model),
+    //
+    (Notifications, Vec<model::Notification>),
+    (CreateNotifications, create_notifications::Model),
 ];
 
 pub trait Presenter: Sized {
@@ -41,6 +47,15 @@ impl Presenter for delete_like::Model {
     fn to_http(self, response: ResponseBuilder) -> Response<Body> {
         response
             .status(StatusCode::NO_CONTENT)
+            .body(Body::empty())
+            .unwrap()
+    }
+}
+
+impl Presenter for create_notifications::Model {
+    fn to_http(self, response: ResponseBuilder) -> Response<Body> {
+        response
+            .status(StatusCode::CREATED)
             .body(Body::empty())
             .unwrap()
     }

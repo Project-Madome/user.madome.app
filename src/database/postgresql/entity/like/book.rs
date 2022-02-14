@@ -1,4 +1,3 @@
-use chrono::{FixedOffset, Utc};
 use sea_orm::{
     prelude::*,
     sea_query::{ColumnDef, ForeignKey, ForeignKeyAction, Table},
@@ -16,7 +15,7 @@ pub struct Model {
     pub id: Uuid,
     pub book_id: i32,
     pub user_id: Uuid,
-    pub created_at: DateTimeWithTimeZone,
+    pub created_at: DateTimeUtc,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -44,7 +43,7 @@ impl From<Model> for Like {
         Self::Book {
             book_id: book_id as u32,
             user_id,
-            created_at: created_at.with_timezone(&Utc),
+            created_at,
         }
     }
 }
@@ -64,13 +63,11 @@ impl From<Like> for ActiveModel {
                     Uuid::new_v5(&Uuid::NAMESPACE_OID, x.as_bytes())
                 };
 
-                let utc = FixedOffset::east(0);
-
                 Self {
                     id: Set(id),
                     book_id: Set(book_id as i32),
                     user_id: Set(user_id),
-                    created_at: Set(created_at.with_timezone(&utc)),
+                    created_at: Set(created_at),
                 }
             }
             _ => unreachable!(),
@@ -79,7 +76,7 @@ impl From<Like> for ActiveModel {
 }
 
 pub async fn create_table(db: &DatabaseConnection) {
-    let smtm = Table::create()
+    let stmt = Table::create()
         .table(Entity)
         .if_not_exists()
         .col(ColumnDef::new(Column::Id).uuid().primary_key())
@@ -92,7 +89,7 @@ pub async fn create_table(db: &DatabaseConnection) {
         )
         .foreign_key(
             ForeignKey::create()
-                .name("user_id")
+                .name(Column::UserId.as_str())
                 .from(Entity, Column::UserId)
                 .to(entity::user::Entity, entity::user::Column::Id)
                 .on_delete(ForeignKeyAction::Cascade),
@@ -100,7 +97,7 @@ pub async fn create_table(db: &DatabaseConnection) {
         .to_owned();
 
     let builder = db.get_database_backend();
-    db.execute(builder.build(&smtm))
+    db.execute(builder.build(&stmt))
         .await
         .expect("create entity::like::book table");
 }

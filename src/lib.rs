@@ -7,6 +7,7 @@ mod entity;
 mod error;
 mod model;
 mod msg;
+mod payload;
 mod registry;
 mod repository;
 mod usecase;

@@ -7,7 +7,10 @@ mod root_registry {
         app::{HttpServer, Resolver},
         config::Config,
         database::DatabaseSet,
-        repository::{PostgresqlLikeRepository, PostgresqlUserRepository, RepositorySet},
+        repository::{
+            PostgresqlLikeRepository, PostgresqlNotificationRepository, PostgresqlUserRepository,
+            RepositorySet,
+        },
     };
 
     combine_component_registry!(
@@ -30,7 +33,8 @@ mod root_registry {
             DatabaseSet,
             RepositorySet,
             PostgresqlUserRepository,
-            PostgresqlLikeRepository
+            PostgresqlLikeRepository,
+            PostgresqlNotificationRepository
         ]
     );
 
