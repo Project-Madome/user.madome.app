@@ -90,17 +90,20 @@ impl LikeRepository for PostgresqlLikeRepository {
 
                 let query = format!(
                     r#"
-                SELECT * FROM
-                (
-                    SELECT id, user_id, book_id, NULL AS tag_kind, NULL AS tag_name, created_at
-                        FROM likes_book
-                        WHERE user_id = $1
-                    UNION ALL
-                    SELECT id, user_id, NULL, tag_kind, tag_name, created_at
-                        FROM likes_book_tag
-                        WHERE user_id = $1
-                ) AS a
-                ORDER BY {sort_by}"#,
+                    SELECT * FROM
+                    (
+                        SELECT id, user_id, book_id, NULL AS tag_kind, NULL AS tag_name, created_at
+                            FROM likes_book
+                            WHERE user_id = $1
+                        UNION ALL
+                        SELECT id, user_id, NULL, tag_kind, tag_name, created_at
+                            FROM likes_book_tag
+                            WHERE user_id = $1
+                    ) AS a
+                    ORDER BY {sort_by}
+                    LIMIT $2
+                    OFFSET $3
+                    "#,
                 );
 
                 let db = self.database.postgresql();
@@ -110,7 +113,11 @@ impl LikeRepository for PostgresqlLikeRepository {
                     .query_all(Statement::from_sql_and_values(
                         psql,
                         &query,
-                        [user_id.into()],
+                        [
+                            user_id.into(),
+                            (offset as i64).into(),
+                            ((offset * (page - 1)) as i64).into(),
+                        ],
                     ))
                     .await?;
 

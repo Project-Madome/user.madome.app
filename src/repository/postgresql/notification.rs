@@ -85,15 +85,18 @@ impl NotificationRepository for PostgresqlNotificationRepository {
                 "notifications_book_tag"."tag_kind" AS "B_tag_kind",
                 "notifications_book_tag"."tag_name" AS "B_tag_name"
             FROM
-                "notifications_book"
+                (SELECT *
+                FROM "notifications_book"
+                WHERE
+                    "notifications_book"."user_id" = $1
+                ORDER BY
+                    {sort_by}
+                LIMIT $2
+                OFFSET $3
+                ) AS "notifications_book"
                 LEFT JOIN "notifications_book_tag"
                     ON "notifications_book"."id" = "notifications_book_tag"."notification_book_id"
-            WHERE
-                "notifications_book"."user_id" = $1
-            ORDER BY
-                {sort_by}
-            LIMIT $2
-            OFFSET $3"#
+            "#
         );
 
         let db = self.database.postgresql();
