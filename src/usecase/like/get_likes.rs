@@ -21,21 +21,21 @@ pub struct Payload {
     #[serde(default)]
     pub user_id: Uuid,
     pub kind: Option<LikeKind>,
-    pub offset: Option<usize>,
+    pub per_page: Option<usize>,
     pub page: Option<usize>,
     pub sort_by: Option<LikeSortBy>,
 }
 
 impl Payload {
     pub fn check(self) -> crate::Result<Self> {
-        let offset = self
-            .offset
+        let per_page = self
+            .per_page
             .unwrap_or(25)
             .validate()
             .min(1)
             .max(100)
             .take()
-            .map_err(payload::Error::InvalidOffset)?;
+            .map_err(payload::Error::InvalidPerPage)?;
 
         let page = self
             .page
@@ -48,7 +48,7 @@ impl Payload {
         Ok(Self {
             user_id: self.user_id,
             kind: self.kind,
-            offset: Some(offset),
+            per_page: Some(per_page),
             page: Some(page),
             sort_by: Some(self.sort_by.unwrap_or(LikeSortBy::CreatedAtDesc)),
         })
@@ -90,7 +90,7 @@ pub async fn execute(p: Payload, repository: Arc<RepositorySet>) -> crate::Resul
     let Payload {
         kind,
         user_id,
-        offset,
+        per_page,
         page,
         sort_by,
     } = p.check()?;
@@ -100,7 +100,7 @@ pub async fn execute(p: Payload, repository: Arc<RepositorySet>) -> crate::Resul
         .get_many(
             user_id,
             kind.map(Into::into),
-            offset.unwrap(),
+            per_page.unwrap(),
             page.unwrap(),
             sort_by.unwrap().into(),
         )
@@ -132,7 +132,7 @@ mod payload_tests {
         let payload: Payload = request.into_payload(USER_ID).await.unwrap();
 
         let expected = Payload {
-            offset: Some(25),
+            per_page: Some(25),
             page: Some(1),
             sort_by: Some(LikeSortBy::CreatedAtDesc),
             kind: None,
@@ -144,12 +144,12 @@ mod payload_tests {
 
     #[tokio::test]
     async fn inject() {
-        let request = request("/?offset=17&page=11&sort-by=created-at-asc&kind=book");
+        let request = request("/?per-page=17&page=11&sort-by=created-at-asc&kind=book");
 
         let payload: Payload = request.into_payload(USER_ID).await.unwrap();
 
         let expected = Payload {
-            offset: Some(17),
+            per_page: Some(17),
             page: Some(11),
             sort_by: Some(LikeSortBy::CreatedAtAsc),
             kind: Some(LikeKind::Book),

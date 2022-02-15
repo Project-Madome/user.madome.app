@@ -4,12 +4,11 @@ use crate::entity::{like::LikeSortBy, Like, LikeKind};
 
 #[async_trait::async_trait]
 pub trait LikeRepository: Send + Sync {
-    // TODO: sort_by
     async fn get_many(
         &self,
         user_id: Uuid,
         kind: Option<LikeKind>,
-        offset: usize,
+        per_page: usize,
         page: usize,
         sort_by: LikeSortBy,
     ) -> crate::Result<Vec<Like>>;

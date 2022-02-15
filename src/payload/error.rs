@@ -7,8 +7,8 @@ pub enum Error {
     #[error("querystring deserialize: {0}")]
     QuerystringDeserialize(serde_qs::Error),
 
-    #[error("offset: {0}")]
-    InvalidOffset(number::Error<usize>),
+    #[error("per-page: {0}")]
+    InvalidPerPage(number::Error<usize>),
     #[error("page: {0}")]
     InvalidPage(number::Error<usize>),
     #[error("sort-by: {0}")]

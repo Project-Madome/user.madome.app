@@ -34,7 +34,7 @@ impl LikeRepository for PostgresqlLikeRepository {
         &self,
         user_id: Uuid,
         kind: Option<LikeKind>,
-        offset: usize,
+        per_page: usize,
         page: usize,
         sort_by: LikeSortBy,
     ) -> crate::Result<Vec<Like>> {
@@ -52,9 +52,9 @@ impl LikeRepository for PostgresqlLikeRepository {
                 }
                 .filter(like::book::Column::UserId.eq(user_id))
                 /* .query()
-                .offset(offset * (page - 1))
-                .limit(offset) */
-                .paginate(self.database.postgresql(), offset) // case1
+                .per_page(per_page * (page - 1))
+                .limit(per_page) */
+                .paginate(self.database.postgresql(), per_page) // case1
                 .fetch_page(page - 1) // case2
                 .await?;
 
@@ -74,7 +74,7 @@ impl LikeRepository for PostgresqlLikeRepository {
                 }
                 .order_by_desc(like::book_tag::Column::CreatedAt)
                 .filter(like::book_tag::Column::UserId.eq(user_id))
-                .paginate(self.database.postgresql(), offset)
+                .paginate(self.database.postgresql(), per_page)
                 .fetch_page(page - 1)
                 .await?;
 
@@ -115,8 +115,8 @@ impl LikeRepository for PostgresqlLikeRepository {
                         &query,
                         [
                             user_id.into(),
-                            (offset as i64).into(),
-                            ((offset * (page - 1)) as i64).into(),
+                            (per_page as i64).into(),
+                            ((per_page * (page - 1)) as i64).into(),
                         ],
                     ))
                     .await?;

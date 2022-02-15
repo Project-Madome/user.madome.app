@@ -21,7 +21,7 @@ impl LikeRepository for InMemoryLikeRepository {
         &self,
         user_id: Uuid,
         kind: Option<LikeKind>,
-        offset: usize,
+        per_page: usize,
         page: usize,
         sort_by: LikeSortBy,
     ) -> crate::Result<Vec<Like>> {
@@ -50,8 +50,8 @@ impl LikeRepository for InMemoryLikeRepository {
                         "unimplemented sort by random in InMemoryLikeRepository::get_many()"
                     ),
                 }
-                .skip(offset * (page - 1))
-                .take(offset)
+                .skip(per_page * (page - 1))
+                .take(per_page)
                 .cloned()
                 .collect();
 

@@ -8,7 +8,7 @@ pub trait NotificationRepository {
         &self,
         user_id: Uuid,
         kind: Option<NotificationKind>,
-        offset: usize,
+        per_page: usize,
         page: usize,
         sort_by: NotificationSortBy,
     ) -> crate::Result<Vec<Notification>>;

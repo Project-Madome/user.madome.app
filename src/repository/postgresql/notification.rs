@@ -32,7 +32,7 @@ impl NotificationRepository for PostgresqlNotificationRepository {
         &self,
         user_id: Uuid,
         _kind: Option<NotificationKind>,
-        offset: usize,
+        per_page: usize,
         page: usize,
         sort_by: NotificationSortBy,
     ) -> crate::Result<Vec<Notification>> {
@@ -61,8 +61,8 @@ impl NotificationRepository for PostgresqlNotificationRepository {
             }
         }
         .filter(notification::book::Column::UserId.eq(user_id))
-        .limit(offset as u64)
-        .offset((offset * (page - 1)) as u64)
+        .limit(per_page as u64)
+        .per_page((per_page * (page - 1)) as u64)
         .all(self.database.postgresql())
         .await?; */
 
@@ -108,13 +108,13 @@ impl NotificationRepository for PostgresqlNotificationRepository {
                 &query,
                 [
                     user_id.into(),
-                    (offset as u64).into(),
-                    ((offset * (page - 1)) as u64).into(),
+                    (per_page as u64).into(),
+                    ((per_page * (page - 1)) as u64).into(),
                 ],
             ))
             .await?;
 
-        let mut xs = Vec::with_capacity(offset);
+        let mut xs = Vec::with_capacity(per_page);
 
         for query_result in r {
             let a = notification::book::Model {
