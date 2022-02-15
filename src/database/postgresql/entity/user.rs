@@ -97,5 +97,5 @@ pub async fn create_table(db: &DatabaseConnection) {
     let builder = db.get_database_backend();
     db.execute(builder.build(&smtm))
         .await
-        .expect("create entity::User table");
+        .expect("create entity::user table");
 }

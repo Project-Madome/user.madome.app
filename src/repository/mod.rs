@@ -29,6 +29,9 @@ pub struct RepositorySet {
 
     #[injected]
     notification_repository: Injected<PostgresqlNotificationRepository>,
+
+    #[injected]
+    fcm_token_repository: Injected<PostgresqlFcmTokenRepository>,
 }
 
 impl RepositorySet {
@@ -42,5 +45,9 @@ impl RepositorySet {
 
     pub fn notification(&self) -> Arc<impl r#trait::NotificationRepository> {
         Arc::clone(&self.notification_repository)
+    }
+
+    pub fn fcm_token(&self) -> Arc<impl r#trait::FcmTokenRepository> {
+        Arc::clone(&self.fcm_token_repository)
     }
 }

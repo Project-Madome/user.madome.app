@@ -6,11 +6,14 @@ pub use like::Like;
 pub use notification::Notification;
 pub use user::User;
 
-use hyper::{http::response::Builder as ResponseBuilder, Body, Response, StatusCode};
+use hyper::{header, http::response::Builder as ResponseBuilder, Body, Response, StatusCode};
 
 use crate::{
     into_model, model,
-    usecase::{create_like, create_notifications, create_user, delete_like},
+    usecase::{
+        create_like, create_notifications, create_or_update_fcm_token, create_user, delete_like,
+        get_fcm_tokens,
+    },
 };
 
 into_model![
@@ -23,6 +26,9 @@ into_model![
     //
     (Notifications, Vec<model::Notification>),
     (CreateNotifications, create_notifications::Model),
+    //
+    (CreateOrUpdateFcmToken, create_or_update_fcm_token::Model),
+    (GetFcmTokens, get_fcm_tokens::Model),
 ];
 
 pub trait Presenter: Sized {
@@ -57,6 +63,27 @@ impl Presenter for create_notifications::Model {
         response
             .status(StatusCode::CREATED)
             .body(Body::empty())
+            .unwrap()
+    }
+}
+
+impl Presenter for create_or_update_fcm_token::Model {
+    fn to_http(self, response: ResponseBuilder) -> Response<Body> {
+        response
+            .status(StatusCode::CREATED)
+            .body(Body::empty())
+            .unwrap()
+    }
+}
+
+impl Presenter for get_fcm_tokens::Model {
+    fn to_http(self, response: ResponseBuilder) -> Response<Body> {
+        let serialized = serde_json::to_string(&self.0).expect("json serialize");
+
+        response
+            .status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(serialized.into())
             .unwrap()
     }
 }

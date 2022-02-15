@@ -15,7 +15,7 @@ use crate::{
     payload,
     usecase::{
         create_like, create_notifications, create_or_update_fcm_token, create_user, delete_like,
-        get_likes, get_likes_from_book_tags, get_notifications, get_user,
+        get_fcm_tokens, get_likes, get_likes_from_book_tags, get_notifications, get_user,
     },
 };
 
@@ -45,6 +45,7 @@ pub enum Msg {
     GetNotifications(get_notifications::Payload),
 
     CreateOrUpdateFcmToken(create_or_update_fcm_token::Payload),
+    GetFcmTokens(get_fcm_tokens::Payload),
 }
 
 impl Msg {
@@ -135,32 +136,32 @@ impl Msg {
                 }
 
                 /* Internal */
-                (Method::GET, path, false) if matcher(path, "/users/:user_id_or_email") => {
-                    auth.check_internal(request.headers())?;
-
-                    let p: get_user::Payload =
-                        PathVariable::from((path, "/users/:user_id_or_email")).into();
-
-                    Ok(Msg::GetUser(p))
-                }
-
                 (Method::GET, "/users/likes/book-tags", false) => {
-                    auth.check_internal(request.headers())?;
-
                     let p = request.try_into()?;
 
                     Ok(Msg::GetLikesFromBookTags(p))
                 }
 
                 (Method::POST, "/users/notifications", false) => {
-                    auth.check_internal(request.headers())?;
-
                     let p = Wrap::async_try_from(request).await?.inner();
 
                     Ok(Msg::CreateNotifications(p))
                 }
 
-                _ => return Err(Error::NotFound.into()),
+                (Method::GET, "/users/fcm-token", false) => {
+                    let p = request.try_into()?;
+
+                    Ok(Msg::GetFcmTokens(p))
+                }
+
+                (Method::GET, path, false) if matcher(path, "/users/:user_id_or_email") => {
+                    let p: get_user::Payload =
+                        PathVariable::from((path, "/users/:user_id_or_email")).into();
+
+                    Ok(Msg::GetUser(p))
+                }
+
+                _ => Err(Error::NotFound.into()),
             }
         }
         .await;
