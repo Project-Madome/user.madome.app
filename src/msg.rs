@@ -1,4 +1,4 @@
-use hyper::{http::response::Builder as ResponseBuilder, Body, Method, Request};
+use hyper::{header, http::response::Builder as ResponseBuilder, Body, Method, Request};
 use madome_sdk::auth::{Auth, Role, MADOME_ACCESS_TOKEN, MADOME_REFRESH_TOKEN};
 use serde::de::DeserializeOwned;
 use util::{
@@ -9,10 +9,14 @@ use util::{
     r#async::AsyncTryFrom,
     IntoPayload, ReadChunks,
 };
+use uuid::Uuid;
 
-use crate::usecase::{
-    create_like, create_notifications, create_user, delete_like, get_likes,
-    get_likes_from_book_tags, get_notifications, get_user,
+use crate::{
+    payload,
+    usecase::{
+        create_like, create_notifications, create_or_update_fcm_token, create_user, delete_like,
+        get_likes, get_likes_from_book_tags, get_notifications, get_user,
+    },
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -39,6 +43,8 @@ pub enum Msg {
 
     CreateNotifications(create_notifications::Payload),
     GetNotifications(get_notifications::Payload),
+
+    CreateOrUpdateFcmToken(create_or_update_fcm_token::Payload),
 }
 
 impl Msg {
@@ -46,118 +52,123 @@ impl Msg {
         request: Request<Body>,
         mut response: ResponseBuilder,
         madome_auth_url: String,
-    ) -> crate::Result<(Self, ResponseBuilder)> {
+    ) -> Result<(Self, ResponseBuilder), (crate::Error, ResponseBuilder)> {
         use Role::*;
 
-        let method = request.method().clone();
-        let path = request.uri().path();
-        let cookie = Cookie::from(request.headers());
+        let headers = request.headers();
+        let cookie = Cookie::from(headers);
 
         let access_token = cookie.get(MADOME_ACCESS_TOKEN).unwrap_or_default();
         let refresh_token = cookie.get(MADOME_REFRESH_TOKEN).unwrap_or_default();
 
         let auth = Auth::new(&madome_auth_url);
 
-        let (maybe_token_pair, msg) = match (method, path) {
-            /* Public */
-            (Method::POST, "/users") => {
-                let (_, token_pair) = auth
+        let user_id = match auth.check_internal(headers).is_ok() {
+            true => Uuid::nil(),
+            false => {
+                let r = auth
                     .check_and_refresh_token_pair(access_token, refresh_token, Developer)
-                    .await?;
+                    .await;
 
-                let p = Wrap::async_try_from(request).await?.inner();
-
-                (Some(token_pair), Msg::CreateUser(p))
-            }
-
-            (Method::GET, "/users/@me") => {
-                let (r, token_pair) = auth
-                    .check_and_refresh_token_pair(access_token, refresh_token, Normal)
-                    .await?;
-
-                let p = get_user::Payload {
-                    id_or_email: r.user_id.to_string(),
+                let (r, token_pair) = match r {
+                    Ok(r) => r,
+                    Err(err) => return Err((err.into(), response)),
                 };
 
-                (Some(token_pair), Msg::GetUser(p))
+                response = response.headers(token_pair.iter());
+
+                r.user_id
             }
-
-            (Method::POST, "/users/@me/likes") => {
-                let (r, token_pair) = auth
-                    .check_and_refresh_token_pair(access_token, refresh_token, Normal)
-                    .await?;
-
-                let mut p: create_like::Payload = Wrap::async_try_from(request).await?.inner();
-                p.set_user_id(r.user_id);
-
-                (Some(token_pair), Msg::CreateLike(p))
-            }
-
-            (Method::GET, "/users/@me/likes") => {
-                let (r, token_pair) = auth
-                    .check_and_refresh_token_pair(access_token, refresh_token, Normal)
-                    .await?;
-
-                let p = request.into_payload(r.user_id).await?;
-
-                (Some(token_pair), Msg::GetLikes(p))
-            }
-
-            (Method::DELETE, "/users/@me/likes") => {
-                let (r, token_pair) = auth
-                    .check_and_refresh_token_pair(access_token, refresh_token, Normal)
-                    .await?;
-
-                let p = request.into_payload(r.user_id).await?;
-
-                (Some(token_pair), Msg::DeleteLike(p))
-            }
-
-            (Method::GET, "/users/@me/notifications") => {
-                let (r, token_pair) = auth
-                    .check_and_refresh_token_pair(access_token, refresh_token, Normal)
-                    .await?;
-
-                let p = request.into_payload(r.user_id).await?;
-
-                (Some(token_pair), Msg::GetNotifications(p))
-            }
-
-            /* Internal */
-            (Method::GET, path) if matcher(path, "/users/:user_id_or_email") => {
-                auth.check_internal(request.headers())?;
-
-                let p: get_user::Payload =
-                    PathVariable::from((path, "/users/:user_id_or_email")).into();
-
-                (None, Msg::GetUser(p))
-            }
-
-            (Method::GET, "/users/likes/book-tags") => {
-                auth.check_internal(request.headers())?;
-
-                let p = request.try_into()?;
-
-                (None, Msg::GetLikesFromBookTags(p))
-            }
-
-            (Method::POST, "/users/notifications") => {
-                auth.check_internal(request.headers())?;
-
-                let p = Wrap::async_try_from(request).await?.inner();
-
-                (None, Msg::CreateNotifications(p))
-            }
-
-            _ => return Err(Error::NotFound.into()),
         };
 
-        if let Some(set_cookie) = maybe_token_pair {
-            // response에 쿠키 설정하고 response 넘겨줌
-            response = response.headers(set_cookie.iter());
-        }
+        // do not mutate response in this async block
+        let msg: crate::Result<Msg> = async move {
+            let method = request.method().clone();
+            let path = request.uri().path();
+            let user_checked = !user_id.is_nil();
 
-        Ok((msg, response))
+            match (method, path, user_checked) {
+                /* Public */
+                (Method::POST, "/users", true) => {
+                    let p = Wrap::async_try_from(request).await?.inner();
+
+                    Ok(Msg::CreateUser(p))
+                }
+
+                (Method::GET, "/users/@me", true) => {
+                    let p = get_user::Payload {
+                        id_or_email: user_id.to_string(),
+                    };
+
+                    Ok(Msg::GetUser(p))
+                }
+
+                (Method::POST, "/users/@me/likes", true) => {
+                    let mut p: create_like::Payload = Wrap::async_try_from(request).await?.inner();
+                    p.set_user_id(user_id);
+
+                    Ok(Msg::CreateLike(p))
+                }
+
+                (Method::GET, "/users/@me/likes", true) => {
+                    let p = request.into_payload(user_id).await?;
+
+                    Ok(Msg::GetLikes(p))
+                }
+
+                (Method::DELETE, "/users/@me/likes", true) => {
+                    let p = request.into_payload(user_id).await?;
+
+                    Ok(Msg::DeleteLike(p))
+                }
+
+                (Method::GET, "/users/@me/notifications", true) => {
+                    let p = request.into_payload(user_id).await?;
+
+                    Ok(Msg::GetNotifications(p))
+                }
+
+                (Method::POST, "/users/@me/fcm-token", true) => {
+                    let p = request.into_payload(user_id).await?;
+
+                    Ok(Msg::CreateOrUpdateFcmToken(p))
+                }
+
+                /* Internal */
+                (Method::GET, path, false) if matcher(path, "/users/:user_id_or_email") => {
+                    auth.check_internal(request.headers())?;
+
+                    let p: get_user::Payload =
+                        PathVariable::from((path, "/users/:user_id_or_email")).into();
+
+                    Ok(Msg::GetUser(p))
+                }
+
+                (Method::GET, "/users/likes/book-tags", false) => {
+                    auth.check_internal(request.headers())?;
+
+                    let p = request.try_into()?;
+
+                    Ok(Msg::GetLikesFromBookTags(p))
+                }
+
+                (Method::POST, "/users/notifications", false) => {
+                    auth.check_internal(request.headers())?;
+
+                    let p = Wrap::async_try_from(request).await?.inner();
+
+                    Ok(Msg::CreateNotifications(p))
+                }
+
+                _ => return Err(Error::NotFound.into()),
+            }
+        }
+        .await;
+
+        match msg {
+            Ok(msg) => Ok((msg, response)),
+            Err(err) => Err((err, response)),
+        }
     }
 }
 
@@ -196,9 +207,22 @@ where
     async fn async_try_from(mut request: Request<Body>) -> Result<Self, Self::Error> {
         let chunks = request.body_mut().read_chunks().await?;
 
-        let payload =
-            serde_json::from_slice::<P>(&chunks).map_err(Error::JsonDeserializePayload)?;
+        let content_type = request
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .map(|x| x.to_str().unwrap_or_default());
 
-        Ok(Wrap(payload))
+        match content_type {
+            Some(content_type) if content_type.starts_with("application/json") => {
+                let payload =
+                    serde_json::from_slice::<P>(&chunks).map_err(Error::JsonDeserializePayload)?;
+
+                Ok(Wrap(payload))
+            }
+            content_type => {
+                let content_type = content_type.unwrap_or_default().to_owned();
+                Err(payload::Error::NotSupportedContentType(content_type).into())
+            }
+        }
     }
 }

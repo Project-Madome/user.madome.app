@@ -5,7 +5,7 @@ use std::{convert::Infallible, net::SocketAddr};
 use hyper::Server;
 use hyper::{
     body::Body,
-    http::{Request, Response},
+    http::{response::Builder as ResponseBuilder, Request, Response},
     service::{make_service_fn, service_fn},
 };
 use inspect::{Inspect, InspectOk};
@@ -17,8 +17,8 @@ use crate::model::{Model, Presenter};
 use crate::msg::Msg;
 use crate::repository::RepositorySet;
 use crate::usecase::{
-    create_like, create_notifications, create_user, delete_like, get_likes,
-    get_likes_from_book_tags, get_notifications, get_user,
+    create_like, create_notifications, create_or_update_fcm_token, create_user, delete_like,
+    get_likes, get_likes_from_book_tags, get_notifications, get_user,
 };
 
 #[derive(Component)]
@@ -62,6 +62,12 @@ impl Resolver {
             Msg::GetNotifications(payload) => get_notifications::execute(payload, repository)
                 .await?
                 .into(),
+
+            Msg::CreateOrUpdateFcmToken(payload) => {
+                create_or_update_fcm_token::execute(payload, repository)
+                    .await?
+                    .into()
+            }
         };
 
         Ok(model)
@@ -85,14 +91,16 @@ pub struct HttpServer {
 
 async fn handler(
     request: Request<Body>,
+    response: ResponseBuilder,
     resolver: Arc<Resolver>,
     auth_url: String,
-) -> crate::Result<Response<Body>> {
-    let response = Response::builder();
-
+) -> Result<Response<Body>, (crate::Error, ResponseBuilder)> {
     let (msg, response) = Msg::http(request, response, auth_url).await?;
 
-    let model = resolver.resolve(msg).await?;
+    let model = match resolver.resolve(msg).await {
+        Ok(r) => r,
+        Err(err) => return Err((err, response)),
+    };
 
     let response = model.to_http(response);
 
@@ -111,7 +119,8 @@ async fn service(
 
     let start = SystemTime::now();
 
-    let response = handler(request, resolver, auth_url).await;
+    let response = Response::builder();
+    let response = handler(request, response, resolver, auth_url).await;
 
     let end = start
         .elapsed()
@@ -121,7 +130,7 @@ async fn service(
 
     match response {
         Ok(response) => Ok(response),
-        Err(err) => Ok(err.inspect(|e| log::error!("{}", e)).into()),
+        Err((err, response)) => Ok(err.inspect(|e| log::error!("{}", e)).to_http(response)),
     }
     .inspect_ok(|res| {
         log::info!(

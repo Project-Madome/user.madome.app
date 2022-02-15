@@ -1,10 +1,11 @@
 use hyper::{Body, Response, StatusCode};
 
 use crate::{
+    model::Presenter,
     payload,
     usecase::{
-        create_like, create_notifications, create_user, delete_like, get_likes,
-        get_likes_from_book_tags, get_notifications, get_user,
+        create_like, create_notifications, create_or_update_fcm_token, create_user, delete_like,
+        get_fcm_tokens, get_likes, get_likes_from_book_tags, get_notifications, get_user,
     },
 };
 
@@ -76,10 +77,15 @@ pub enum UseCaseError {
     CreateNotifications(#[from] create_notifications::Error),
     #[error("GetNotifications: {0}")]
     GetNotifications(#[from] get_notifications::Error),
+
+    #[error("CreateOrUpdateFcmToken: {0}")]
+    CreateOrUpdateFcmToken(#[from] create_or_update_fcm_token::Error),
+    #[error("GetFcmTokens: {0}")]
+    GetFcmTokens(#[from] get_fcm_tokens::Error),
 }
 
-impl From<Error> for Response<Body> {
-    fn from(error: Error) -> Self {
+impl Presenter for Error {
+    fn to_http(self, response: hyper::http::response::Builder) -> Response<Body> {
         use crate::msg::Error::*;
         use create_like::Error::*;
         use create_user::Error::*;
@@ -88,9 +94,7 @@ impl From<Error> for Response<Body> {
         use Error::*;
         use UseCaseError::*;
 
-        let response = Response::builder();
-
-        match error {
+        match self {
             Msg(JsonDeserializePayload(err)) => response
                 .status(StatusCode::BAD_REQUEST)
                 .body(err.to_string().into()),
