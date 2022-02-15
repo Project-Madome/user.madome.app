@@ -9,7 +9,7 @@ use crate::{
     repository::{r#trait::UserRepository, RepositorySet},
 };
 
-#[derive(Deserialize, Clone)]
+#[derive(Debug, Deserialize)]
 pub struct Payload {
     pub name: String,
     pub email: String,

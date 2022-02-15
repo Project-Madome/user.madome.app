@@ -8,7 +8,7 @@ use crate::{
     repository::{r#trait::LikeRepository, RepositorySet},
 };
 
-#[derive(Clone)]
+#[derive(Debug)]
 pub struct Payload {
     pub book_tags: Vec<(String, String)>,
 }

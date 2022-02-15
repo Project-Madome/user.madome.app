@@ -11,7 +11,7 @@ use crate::{
     repository::{r#trait::LikeRepository, RepositorySet},
 };
 
-#[derive(Clone, Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Payload {
     Book {

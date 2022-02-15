@@ -11,7 +11,7 @@ use crate::{
     repository::{r#trait::FcmTokenRepository, RepositorySet},
 };
 
-#[derive(Clone, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct Payload {
     pub udid: Uuid,
     pub fcm_token: String,
