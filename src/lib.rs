@@ -32,5 +32,5 @@ pub fn test() -> bool {
 
 #[cfg(test)]
 pub mod tests {
-    pub use super::registry::tests::RootRegistry;
+    // pub use super::registry::tests::RootRegistry;
 }

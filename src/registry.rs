@@ -43,7 +43,7 @@ mod root_registry {
 
     component_registry!(ConfigRegistry, [Config]);
 }
-
+/*
 #[cfg(test)]
 pub mod tests {
     use sai::{combine_component_registry, component_registry, Component};
@@ -82,3 +82,4 @@ pub mod tests {
 
     component_registry!(ConfigRegistry, [Config]);
 }
+ */
