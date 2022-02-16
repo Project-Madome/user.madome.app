@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "1.15", features = ["full"] }
+tokio = { version = "1.15", features = ["macros", "sync", "signal"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 async-trait = "0.1"
@@ -19,12 +19,13 @@ dotenv = "0.15"
 chrono = { version = "0.4", features = ["serde"] }
 log = "0.4"
 simple_logger = "2.1"
-sea-orm = { version = "0.6", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros", "sqlx-chrono", "sqlx-uuid"], default-features = false }
-inspect = { git = "https://github.com/syrflover/inspect-rs" }
+sea-orm = { version = "0.6", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "sqlx-chrono", "sqlx-uuid"], default-features = false }
 openssl = { version = "0.10", features = ["vendored"] }
 itertools = "0.10"
 querystring = "1.1"
 serde_qs = "0.8"
+inspect = { git = "https://github.com/syrflover/inspect-rs" }
+fcm-sdk = { git = "https://github.com/syrflover/fcm-rust" }
 util = { path = "../util" }
 madome-sdk = { path = "../madome-sdk", features = ["server"] }
 
