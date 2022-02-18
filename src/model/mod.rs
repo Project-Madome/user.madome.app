@@ -2,7 +2,7 @@ mod like;
 mod notification;
 mod user;
 
-pub use like::Like;
+pub use like::{Like, LikeWithoutUserId};
 pub use notification::Notification;
 pub use user::User;
 
