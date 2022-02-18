@@ -95,10 +95,6 @@ impl Presenter for Error {
         use UseCaseError::*;
 
         match self {
-            Msg(JsonDeserializePayload(err)) => response
-                .status(StatusCode::BAD_REQUEST)
-                .body(err.to_string().into()),
-
             Msg(NotFound) => response
                 .status(StatusCode::NOT_FOUND)
                 .body("Not found".into()),

@@ -23,8 +23,6 @@ use crate::{
 pub enum Error {
     #[error("Not found")]
     NotFound,
-    #[error("Json deserialize")]
-    JsonDeserializePayload(serde_json::Error),
 }
 
 /// Msg의 Payload는 같은 이름의 usecase의 Payload와는 관계가 없음
@@ -215,8 +213,8 @@ where
 
         match content_type {
             Some(content_type) if content_type.starts_with("application/json") => {
-                let payload =
-                    serde_json::from_slice::<P>(&chunks).map_err(Error::JsonDeserializePayload)?;
+                let payload = serde_json::from_slice::<P>(&chunks)
+                    .map_err(payload::Error::JsonDeserialize)?;
 
                 Ok(Wrap(payload))
             }
