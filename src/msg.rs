@@ -66,7 +66,7 @@ impl Msg {
             true => Uuid::nil(),
             false => {
                 let r = auth
-                    .check_and_refresh_token_pair(access_token, refresh_token, Developer)
+                    .check_and_refresh_token_pair(access_token, refresh_token, Normal)
                     .await;
 
                 let (r, token_pair) = match r {
