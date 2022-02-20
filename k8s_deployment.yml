@@ -28,51 +28,51 @@ spec:
                         value: "3112"
                       - name: POSTGRES_HOST
                         valueFrom:
-                            configMapKeyRef:
+                            secretKeyRef:
                                 name: madome-user-secret
                                 key: postgres_host
                       - name: POSTGRES_USER
                         valueFrom:
-                            configMapKeyRef:
+                            secretKeyRef:
                                 name: madome-user-secret
                                 key: postgres_user
                       - name: POSTGRES_PW
                         valueFrom:
-                            configMapKeyRef:
+                            secretKeyRef:
                                 name: madome-user-secret
                                 key: postgres_pw
                       - name: POSTGRES_DB
                         valueFrom:
-                            configMapKeyRef:
+                            secretKeyRef:
                                 name: madome-user-secret
                                 key: postgres_db
                       - name: POSTGRES_PORT
                         valueFrom:
-                            configMapKeyRef:
+                            secretKeyRef:
                                 name: madome-user-secret
                                 key: postgres_port
                       - name: MADOME_AUTH_URL
                         valueFrom:
-                            configMapKeyRef:
+                            secretKeyRef:
                                 name: madome-user-secret
                                 key: madome_auth_url
                       - name: FIREBASE_PROJECT_ID
                         valueFrom:
-                            configMapKeyRef:
+                            secretKeyRef:
                                 name: madome-user-secret
                                 key: firebase_project_id
                       - name: FIREBASE_PRIVATE_KEY_ID
                         valueFrom:
-                            configMapKeyRef:
+                            secretKeyRef:
                                 name: madome-user-secret
                                 key: firebase_private_key_id
                       - name: FIREBASE_PRIVATE_KEY
                         valueFrom:
-                            configMapKeyRef:
+                            secretKeyRef:
                                 name: madome-user-secret
                                 key: firebase_private_key
                       - name: FIREBASE_CLIENT_EMAIL
                         valueFrom:
-                            configMapKeyRef:
+                            secretKeyRef:
                                 name: madome-user-secret
                                 key: firebase_client_email
