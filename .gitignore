@@ -93,3 +93,4 @@ $RECYCLE.BIN/
 .env*
 bin/
 firebase.credential.json
+secret.yml

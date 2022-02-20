@@ -26,12 +26,24 @@ if [ "$(git branch --show-current)" = "release" ]; then
         echo "binary file does not released or not found"
         exit 1
     fi
+
+    kubectl apply -f k8s_cluster_ip.yml
+
+    if [ ! -f $BIN ]; then
+        exit 1
+    fi
 else
     # PREV_DOCKER_IMAGE_ID="$(docker images -q madome-user:latest)"
 
     cargo build --target=x86_64-unknown-linux-musl
 
     if [ $? -ne 0 ]; then
+        exit 1
+    fi
+
+    kubectl apply -f k8s_node_port.yml
+
+    if [ ! -f $BIN ]; then
         exit 1
     fi
 
@@ -42,12 +54,12 @@ fi
 
 chmod +x $BIN
 
-POSTGRES_HOST="$(cat .env.release | grep "REAL_POSTGRES_HOST" | sed -e 's/REAL_POSTGRES_HOST=//')"
+# POSTGRES_HOST="$(cat .env.release | grep "REAL_POSTGRES_HOST" | sed -e 's/REAL_POSTGRES_HOST=//')"
 
-if [ $? -ne 0 ]; then
-    echo "failed parsing REAL_POSTGRES_HOST from .env.release"
-    exit 1
-fi
+# if [ $? -ne 0 ]; then
+#     echo "failed parsing REAL_POSTGRES_HOST from .env.release"
+#     exit 1
+# fi
 
 docker build --build-arg BINARY_FILE="$BIN" --tag "madome-user:$VERSION" . # --no-cache --rm --force-rm
 
@@ -56,10 +68,10 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-cat k8s.yml | \
-sed -e "s/{POSTGRES_HOST}/$POSTGRES_HOST/" | \
+cat k8s_deployment.yml | \
+# sed -e "s/{POSTGRES_HOST}/$POSTGRES_HOST/" | \
 sed -e "s/{VERSION}/$VERSION/g" | \
-sed -e "s%{WORK_DIR}%$PWD%g" | \
+# sed -e "s%{WORK_DIR}%$PWD%g" | \
 kubectl apply -f -
 
 if [ $? -ne 0 ]; then

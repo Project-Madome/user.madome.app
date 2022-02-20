@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: madome-user
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: madome-user
+    template:
+        metadata:
+            labels:
+                app: madome-user
+        spec:
+            containers:
+                - name: madome-user
+                  image: madome-user:{VERSION}
+                  imagePullPolicy: Never
+                  resources:
+                      limits:
+                          memory: "512Mi"
+                          cpu: "500m"
+                  ports:
+                      - containerPort: 3112
+                        protocol: TCP
+                  env:
+                      - name: PORT
+                        value: "3112"
+                      - name: POSTGRES_HOST
+                        valueFrom:
+                            configMapKeyRef:
+                                name: madome-user-secret
+                                key: postgres_host
+                      - name: POSTGRES_USER
+                        valueFrom:
+                            configMapKeyRef:
+                                name: madome-user-secret
+                                key: postgres_user
+                      - name: POSTGRES_PW
+                        valueFrom:
+                            configMapKeyRef:
+                                name: madome-user-secret
+                                key: postgres_pw
+                      - name: POSTGRES_DB
+                        valueFrom:
+                            configMapKeyRef:
+                                name: madome-user-secret
+                                key: postgres_db
+                      - name: POSTGRES_PORT
+                        valueFrom:
+                            configMapKeyRef:
+                                name: madome-user-secret
+                                key: postgres_port
+                      - name: MADOME_AUTH_URL
+                        valueFrom:
+                            configMapKeyRef:
+                                name: madome-user-secret
+                                key: madome_auth_url
