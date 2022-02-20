@@ -56,3 +56,23 @@ spec:
                             configMapKeyRef:
                                 name: madome-user-secret
                                 key: madome_auth_url
+                      - name: FIREBASE_PROJECT_ID
+                        valueFrom:
+                            configMapKeyRef:
+                                name: madome-user-secret
+                                key: firebase_project_id
+                      - name: FIREBASE_PRIVATE_KEY_ID
+                        valueFrom:
+                            configMapKeyRef:
+                                name: madome-user-secret
+                                key: firebase_private_key_id
+                      - name: FIREBASE_PRIVATE_KEY
+                        valueFrom:
+                            configMapKeyRef:
+                                name: madome-user-secret
+                                key: firebase_private_key
+                      - name: FIREBASE_CLIENT_EMAIL
+                        valueFrom:
+                            configMapKeyRef:
+                                name: madome-user-secret
+                                key: firebase_client_email
