@@ -1,4 +1,9 @@
-use sai::Component;
+pub mod send_notification;
+
+use fcm_sdk::Message;
+use sai::{Component, Injected};
+
+use self::{r#trait::Command, send_notification::SendNotification};
 
 pub mod r#trait {
 
@@ -13,18 +18,18 @@ pub mod r#trait {
 
 #[derive(Component)]
 pub struct CommandSet {
-    /* #[cfg(not(test))]
-#[injected]
-get_user_info: Injected<GetUserInfo>,
-
-#[cfg(test)]
-#[injected]
-get_user_info: Injected<tests::GetUserInfo>, */}
+    #[injected]
+    send_notification: Injected<SendNotification>,
+}
 
 impl CommandSet {
-    /* pub async fn get_user_info(&self, user_id_or_email: String) -> crate::Result<UserInfo> {
-        self.get_user_info.execute(user_id_or_email).await
-    } */
+    pub async fn send_notification(
+        &self,
+        tokens: Vec<String>,
+        message: impl Into<Message> + Send + Sync + 'static,
+    ) -> crate::Result<()> {
+        self.send_notification.execute((tokens, message)).await
+    }
 }
 
 #[cfg(test)]

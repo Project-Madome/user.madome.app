@@ -25,7 +25,7 @@ itertools = "0.10"
 querystring = "1.1"
 serde_qs = "0.8"
 inspect = { git = "https://github.com/syrflover/inspect-rs" }
-fcm-sdk = { git = "https://github.com/syrflover/fcm-rust" }
+fcm-sdk = { git = "https://github.com/syrflover/fcm-rust", tag = "0.1.0" }
 util = { path = "../util" }
 madome-sdk = { git = "https://github.com/Project-Madome/madome-sdk-rs", tag = "0.1.0", features = ["server"] }
 

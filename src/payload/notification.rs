@@ -1,5 +1,4 @@
 use serde::Deserialize;
-use uuid::Uuid;
 
 use crate::entity;
 
@@ -40,10 +39,11 @@ impl From<NotificationSortBy> for entity::NotificationSortBy {
     }
 }
 
-#[cfg_attr(test, derive(PartialEq))]
-#[derive(Debug, Deserialize)]
+/* #[cfg_attr(test, derive(PartialEq))]
+#[derive(Debug, Clone, Deserialize)]
 pub struct NotificationBook {
     pub book_id: u32,
     pub book_tags: Vec<(String, String)>,
-    pub user_id: Uuid,
+    // pub user_id: Uuid,
 }
+ */

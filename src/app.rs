@@ -12,6 +12,7 @@ use inspect::{Inspect, InspectOk};
 use sai::{Component, ComponentLifecycle, Injected};
 use tokio::sync::oneshot;
 
+use crate::command::CommandSet;
 use crate::config::Config;
 use crate::model::{Model, Presenter};
 use crate::msg::Msg;
@@ -25,9 +26,9 @@ use crate::usecase::{
 pub struct Resolver {
     #[injected]
     repository: Injected<RepositorySet>,
-    // #[injected]
-    // command: Injected<CommandSet>,
 
+    #[injected]
+    command: Injected<CommandSet>,
     // #[injected]
     // config: Injected<Config>,
 }
@@ -35,7 +36,7 @@ pub struct Resolver {
 impl Resolver {
     async fn resolve(&self, msg: Msg) -> crate::Result<Model> {
         let repository = Arc::clone(&self.repository);
-        // let command = Arc::clone(&self.command);
+        let command = Arc::clone(&self.command);
         // let config = Arc::clone(&self.config);
 
         let model = match msg {
@@ -55,9 +56,11 @@ impl Resolver {
                     .into()
             }
 
-            Msg::CreateNotifications(payload) => create_notifications::execute(payload, repository)
-                .await?
-                .into(),
+            Msg::CreateNotifications(payload) => {
+                create_notifications::execute(payload, repository, command)
+                    .await?
+                    .into()
+            }
 
             Msg::GetNotifications(payload) => get_notifications::execute(payload, repository)
                 .await?
