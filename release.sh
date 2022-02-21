@@ -51,7 +51,6 @@ github-release -v upload \
     --repo "$SVC.madome.app" \
     --tag "${CURRENT_BRANCH}/${VERSION}" \
     --name "${CURRENT_BRANCH}-$VERSION" \
-    # --name "madome-user-linux-x86_64" \
     --file ./target/x86_64-unknown-linux-musl/$TARGET/madome-$SVC
 
 if [ $? -ne 0 ]; then
