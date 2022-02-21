@@ -1,5 +1,4 @@
 MINIKUBE=$1
-UPDATE=$2
 
 SVC=user
 
@@ -18,48 +17,42 @@ if [ "$CURRENT_BRANCH" != "stable" ] && [ "$CURRENT_BRANCH" != "beta" ]; then
 
     kubectl apply -f k8s_node_port.yml
 
-    VERSION="latest"
-
-    BIN="./target/x86_64-unknown-linux-musl/debug/madome-$SVC"
-else
     if [ ! -f $BIN ]; then
-        echo "binary file download"
-        ./update.sh
-    fi
-
-    if [ ! -f $BIN ]; then
-        echo "binary file does not released or not found"
         exit 1
     fi
 
+    VERSION="latest"
+
+    BIN="./target/x86_64-unknown-linux-musl/debug/madome-$SVC"
+
+    chmod +x $BIN
+
+    docker build --build-arg BINARY_FILE="$BIN" --tag "madome/$SVC:$VERSION" .
+
+    if [ $? -ne 0 ]; then
+        echo "failed docker build"
+        exit 1
+    fi
+else
     kubectl apply -f k8s_cluster_ip.yml
 
     if [ ! -f $BIN ]; then
         exit 1
     fi
 
-    # e.g. stable-0.1.1
-    VERSION="${CURRENT_BRANCH}-$VERSION"
+    # e.g. 0.1.1-stable
+    VERSION="$VERSION-$CURRENT_BRANCH"
 fi
 
-chmod +x $BIN
-
-docker build --build-arg BINARY_FILE="$BIN" --tag "madome-user:$VERSION" .
-
-if [ $? -ne 0 ]; then
-    echo "failed docker build"
-    exit 1
-fi
-
-if [ "$MINIKUBE" = "true" ]; then
-    echo "minikube load image"
-    minikube image load "madome-$SVC:$VERSION"
-
-    if [ $? -ne 0 ]; then
-        echo "failed docker build"
-        exit 1
-    fi
-fi
+# if [ "$MINIKUBE" = "true" ]; then
+#     echo "minikube load image"
+#     minikube image load "madome-$SVC:$VERSION"
+#
+#     if [ $? -ne 0 ]; then
+#         echo "failed docker build"
+#         exit 1
+#     fi
+# fi
 
 cat k8s_deployment.yml | \
 sed -e "s/{VERSION}/$VERSION/g" | \

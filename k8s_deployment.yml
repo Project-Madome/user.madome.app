@@ -14,7 +14,7 @@ spec:
         spec:
             containers:
                 - name: madome-user
-                  image: madome-user:{VERSION}
+                  image: madome/user:{VERSION}
                   imagePullPolicy: IfNotPresent
                   resources:
                       limits:
