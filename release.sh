@@ -10,7 +10,7 @@ if [ "$CURRENT_BRANCH" = "beta" ]; then
     TARGET="debug"
 
     cargo build --debug --target=x86_64-unknown-linux-musl
-else if [ "$CURRENT_BRANCH" = "stable" ]; then
+elif [ "$CURRENT_BRANCH" = "stable" ]; then
     TARGET="release"
 
     cargo build --release --target=x86_64-unknown-linux-musl
