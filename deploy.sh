@@ -1,4 +1,5 @@
 MINIKUBE=$1
+UPDATE=$2
 
 SVC=user
 
