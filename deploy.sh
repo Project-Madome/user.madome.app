@@ -40,8 +40,15 @@ else
         exit 1
     fi
 
-    # e.g. 0.1.1-stable
-    VERSION="$VERSION-$CURRENT_BRANCH"
+    if [ "$CURRENT_BRANCH" = "beta" ]; then
+        # e.g. 0.1.1-beta
+        VERSION="$VERSION-$CURRENT_BRANCH"
+    else
+        # e.g. 0.1.1
+        VERSION="$VERSION"
+    fi
+
+    
 fi
 
 # if [ "$MINIKUBE" = "true" ]; then
