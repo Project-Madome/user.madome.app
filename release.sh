@@ -9,7 +9,7 @@ VERSION="$(cat Cargo.toml | grep 'version = ' | head -1 | sed -e 's/version = //
 if [ "$CURRENT_BRANCH" = "beta" ]; then
     TARGET="debug"
 
-    cargo build --debug --target=x86_64-unknown-linux-musl
+    cargo build --target=x86_64-unknown-linux-musl
 elif [ "$CURRENT_BRANCH" = "stable" ]; then
     TARGET="release"
 
@@ -42,6 +42,8 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+echo "\n"
+echo "\n"
 echo "succeed release\n"
 
 github-release -v upload \
@@ -57,4 +59,6 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+echo "\n"
+echo "\n"
 echo "succeed upload"
