@@ -13,10 +13,10 @@ pub struct Payload {
     pub book_tags: Vec<(String, String)>,
 }
 
-impl TryFrom<Request<Body>> for Payload {
+impl TryFrom<&mut Request<Body>> for Payload {
     type Error = crate::Error;
 
-    fn try_from(request: Request<Body>) -> Result<Self, Self::Error> {
+    fn try_from(request: &mut Request<Body>) -> Result<Self, Self::Error> {
         let qs = querystring::querify(request.uri().query().unwrap_or_default());
 
         let tags = qs

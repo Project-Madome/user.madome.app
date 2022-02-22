@@ -15,10 +15,10 @@ pub struct Payload {
     pub user_ids: Vec<Uuid>,
 }
 
-impl TryFrom<Request<Body>> for Payload {
+impl TryFrom<&mut Request<Body>> for Payload {
     type Error = crate::Error;
 
-    fn try_from(request: Request<Body>) -> Result<Self, Self::Error> {
+    fn try_from(request: &mut Request<Body>) -> Result<Self, Self::Error> {
         let a = request.uri().query().unwrap_or_default();
 
         let payload = serde_qs::from_str(a).map_err(payload::Error::QuerystringDeserialize)?;

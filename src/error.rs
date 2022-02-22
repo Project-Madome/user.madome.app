@@ -1,6 +1,10 @@
-use hyper::{Body, Response, StatusCode};
+use std::sync::Arc;
+
+use hyper::{Body, Request, Response, StatusCode};
+use util::{body_parser, http::SetResponse};
 
 use crate::{
+    config::Config,
     model::Presenter,
     payload,
     usecase::{
@@ -24,11 +28,22 @@ pub enum Error {
     Payload(#[from] payload::Error),
 
     #[error("AuthSdk: {0}")]
-    AuthSdk(#[from] madome_sdk::auth::Error),
+    AuthSdk(#[from] madome_sdk::api::auth::Error),
 
     // TODO: 나중에 위치 재선정
     #[error("ReadChunksFromBody: {0}")]
     ReadChunksFromBody(#[from] hyper::Error),
+}
+
+impl From<body_parser::Error> for Error {
+    fn from(err: body_parser::Error) -> Self {
+        match err {
+            body_parser::Error::JsonDeserialize(e) => payload::Error::JsonDeserialize(e).into(),
+            body_parser::Error::NotSupportedContentType(e) => {
+                payload::Error::NotSupportedContentType(e).into()
+            }
+        }
+    }
 }
 
 type MsgError = crate::msg::Error;
@@ -84,8 +99,14 @@ pub enum UseCaseError {
     GetFcmTokens(#[from] get_fcm_tokens::Error),
 }
 
+#[async_trait::async_trait]
 impl Presenter for Error {
-    fn to_http(self, response: hyper::http::response::Builder) -> Response<Body> {
+    async fn set_response(
+        self,
+        _request: &mut Request<Body>,
+        resp: &mut Response<Body>,
+        _config: Arc<Config>,
+    ) -> crate::Result<()> {
         use crate::msg::Error::*;
         use create_like::Error::*;
         use create_user::Error::*;
@@ -95,42 +116,75 @@ impl Presenter for Error {
         use UseCaseError::*;
 
         match self {
-            Msg(NotFound) => response
-                .status(StatusCode::NOT_FOUND)
-                .body("Not found".into()),
+            Msg(NotFound) => {
+                resp.set_status(StatusCode::NOT_FOUND).unwrap();
+                resp.set_body("Not found".into());
+            }
 
-            Payload(err) => response
-                .status(StatusCode::BAD_REQUEST)
-                .body(err.to_string().into()),
+            Payload(err) => {
+                resp.set_status(StatusCode::BAD_REQUEST).unwrap();
+                resp.set_body(err.to_string().into());
+            }
 
             UseCase(CreateUser(
                 err @ InvalidName(_) | err @ InvalidEmail(_) | err @ InvalidRole(_),
-            )) => response
-                .status(StatusCode::BAD_REQUEST)
-                .body(err.to_string().into()),
+            )) => {
+                resp.set_status(StatusCode::BAD_REQUEST).unwrap();
+                resp.set_body(err.to_string().into());
+            }
 
-            UseCase(CreateUser(AlreadyExistsUser)) => response
-                .status(StatusCode::CONFLICT)
-                .body("Already exist user".into()),
+            UseCase(CreateUser(AlreadyExistsUser)) => {
+                resp.set_status(StatusCode::CONFLICT).unwrap();
+                resp.set_body("Already exist user".into());
+            }
+            UseCase(GetUser(NotFoundUser)) => {
+                resp.set_status(StatusCode::NOT_FOUND).unwrap();
+                resp.set_body("Not found user".into());
+            }
 
-            UseCase(GetUser(NotFoundUser)) => response
-                .status(StatusCode::NOT_FOUND)
-                .body("Not found user".into()),
+            UseCase(CreateLike(err @ AlreadyExistsLike)) => {
+                resp.set_status(StatusCode::CONFLICT).unwrap();
+                resp.set_body(err.to_string().into());
+            }
+            UseCase(DeleteLike(err @ NotFoundLike)) => {
+                resp.set_status(StatusCode::NOT_FOUND).unwrap();
+                resp.set_body(err.to_string().into());
+            }
+            AuthSdk(ref err) => {
+                use madome_sdk::api::{auth::Error as AuthError, BaseError};
 
-            UseCase(CreateLike(err @ AlreadyExistsLike)) => response
-                .status(StatusCode::CONFLICT)
-                .body(err.to_string().into()),
+                match err {
+                    AuthError::Base(err) => match err {
+                        err @ BaseError::Unauthorized => {
+                            resp.set_status(StatusCode::UNAUTHORIZED).unwrap();
+                            resp.set_body(err.to_string().into());
+                        }
+                        err @ BaseError::PermissionDenied => {
+                            resp.set_status(StatusCode::FORBIDDEN).unwrap();
+                            resp.set_body(err.to_string().into());
+                        }
+                        BaseError::Undefined(code, body) => {
+                            resp.set_status(code).unwrap();
+                            resp.set_body(body.to_owned().into());
+                        }
+                        _ => {
+                            resp.set_status(StatusCode::INTERNAL_SERVER_ERROR).unwrap();
+                            resp.set_body(err.to_string().into());
+                        }
+                    },
+                    _ => {
+                        resp.set_status(StatusCode::INTERNAL_SERVER_ERROR).unwrap();
+                        resp.set_body(err.to_string().into());
+                    }
+                }
+            }
 
-            UseCase(DeleteLike(err @ NotFoundLike)) => response
-                .status(StatusCode::NOT_FOUND)
-                .body(err.to_string().into()),
+            err => {
+                resp.set_status(StatusCode::INTERNAL_SERVER_ERROR).unwrap();
+                resp.set_body(err.to_string().into());
+            }
+        };
 
-            AuthSdk(err) => err.to_http(response),
-
-            err => response
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(err.to_string().into()),
-        }
-        .unwrap()
+        Ok(())
     }
 }

@@ -56,13 +56,13 @@ impl Payload {
 }
 
 #[async_trait::async_trait]
-impl FromRequest for Payload {
+impl<'a> FromRequest<'a> for Payload {
     type Parameter = Uuid;
     type Error = crate::Error;
 
     async fn from_request(
         user_id: Self::Parameter,
-        request: Request<hyper::Body>,
+        request: &'a mut Request<hyper::Body>,
     ) -> Result<Self, Self::Error> {
         let qs = request.uri().query().unwrap_or_default();
         let payload: Self =
@@ -112,7 +112,7 @@ pub async fn execute(p: Payload, repository: Arc<RepositorySet>) -> crate::Resul
 #[cfg(test)]
 mod payload_tests {
     use hyper::{Body, Request};
-    use util::IntoPayload;
+    use util::ToPayload;
     use uuid::Uuid;
 
     use crate::payload::like::{LikeKind, LikeSortBy};
@@ -127,9 +127,9 @@ mod payload_tests {
 
     #[tokio::test]
     async fn default() {
-        let request = request("/");
+        let mut request = request("/");
 
-        let payload: Payload = request.into_payload(USER_ID).await.unwrap();
+        let payload: Payload = request.to_payload(USER_ID).await.unwrap();
 
         let expected = Payload {
             per_page: Some(25),
@@ -144,9 +144,9 @@ mod payload_tests {
 
     #[tokio::test]
     async fn inject() {
-        let request = request("/?per-page=17&page=11&sort-by=created-at-asc&kind=book");
+        let mut request = request("/?per-page=17&page=11&sort-by=created-at-asc&kind=book");
 
-        let payload: Payload = request.into_payload(USER_ID).await.unwrap();
+        let payload: Payload = request.to_payload(USER_ID).await.unwrap();
 
         let expected = Payload {
             per_page: Some(17),

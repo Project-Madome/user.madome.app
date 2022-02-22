@@ -1,13 +1,12 @@
 use hyper::{Body, Request};
 use serde::Deserialize;
 use std::sync::Arc;
-use util::{r#async::AsyncTryFrom, FromRequest};
+use util::{BodyParser, FromRequest};
 use uuid::Uuid;
 
 use crate::{
     entity::Like,
     error::UseCaseError,
-    msg::Wrap,
     repository::{r#trait::LikeRepository, RepositorySet},
 };
 
@@ -45,12 +44,15 @@ impl Payload {
 }
 
 #[async_trait::async_trait]
-impl FromRequest for Payload {
+impl<'a> FromRequest<'a> for Payload {
     type Error = crate::Error;
     type Parameter = Uuid;
 
-    async fn from_request(user_id: Uuid, request: Request<Body>) -> Result<Self, Self::Error> {
-        let mut r: Payload = Wrap::async_try_from(request).await?.inner();
+    async fn from_request(
+        user_id: Uuid,
+        request: &'a mut Request<Body>,
+    ) -> Result<Self, Self::Error> {
+        let mut r: Payload = request.body_parse().await?;
         r.set_user_id(user_id);
 
         Ok(r)

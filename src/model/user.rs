@@ -1,8 +1,11 @@
-use chrono::{DateTime, Utc};
-use hyper::{header, StatusCode};
-use serde::Serialize;
+use std::sync::Arc;
 
-use crate::entity;
+use chrono::{DateTime, Utc};
+use hyper::{header, Body, Request, Response, StatusCode};
+use serde::Serialize;
+use util::http::SetResponse;
+
+use crate::{config::Config, entity};
 
 use super::Presenter;
 
@@ -16,15 +19,22 @@ pub struct User {
     pub updated_at: DateTime<Utc>,
 }
 
+#[async_trait::async_trait]
 impl Presenter for User {
-    fn to_http(self, response: hyper::http::response::Builder) -> hyper::Response<hyper::Body> {
+    async fn set_response(
+        self,
+        _request: &mut Request<Body>,
+        resp: &mut Response<Body>,
+        _config: Arc<Config>,
+    ) -> crate::Result<()> {
         let serialized = serde_json::to_vec(&self).expect("json serialize");
 
-        response
-            .status(StatusCode::OK)
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(serialized.into())
-            .unwrap()
+        resp.set_status(StatusCode::OK).unwrap();
+        resp.set_header(header::CONTENT_TYPE, "application/json")
+            .unwrap();
+        resp.set_body(serialized.into());
+
+        Ok(())
     }
 }
 

@@ -5,7 +5,7 @@ use std::{convert::Infallible, net::SocketAddr};
 use hyper::Server;
 use hyper::{
     body::Body,
-    http::{response::Builder as ResponseBuilder, Request, Response},
+    http::{Request, Response},
     service::{make_service_fn, service_fn},
 };
 use inspect::{Inspect, InspectOk};
@@ -97,27 +97,24 @@ pub struct HttpServer {
 }
 
 async fn handler(
-    request: Request<Body>,
-    response: ResponseBuilder,
+    request: &mut Request<Body>,
+    response: &mut Response<Body>,
     resolver: Arc<Resolver>,
-    auth_url: String,
-) -> Result<Response<Body>, (crate::Error, ResponseBuilder)> {
-    let (msg, response) = Msg::http(request, response, auth_url).await?;
+    config: Arc<Config>,
+) -> crate::Result<()> {
+    let msg = Msg::http(request, response, config.clone()).await?;
 
-    let model = match resolver.resolve(msg).await {
-        Ok(r) => r,
-        Err(err) => return Err((err, response)),
-    };
+    let model = resolver.resolve(msg).await?;
 
-    let response = model.to_http(response);
+    let _r = model.set_response(request, response, config).await?;
 
-    Ok(response)
+    Ok(())
 }
 
 async fn service(
-    request: Request<Body>,
+    mut request: Request<Body>,
     resolver: Arc<Resolver>,
-    auth_url: String,
+    config: Arc<Config>,
 ) -> Result<Response<Body>, Infallible> {
     let req_method = request.method().to_owned();
     let req_uri = request.uri().to_string();
@@ -126,8 +123,8 @@ async fn service(
 
     let start = SystemTime::now();
 
-    let response = Response::builder();
-    let response = handler(request, response, resolver, auth_url).await;
+    let mut response = Response::new(Body::empty());
+    let ret = handler(&mut request, &mut response, resolver, config.clone()).await;
 
     let end = start
         .elapsed()
@@ -135,11 +132,14 @@ async fn service(
         .map(Duration::as_micros)
         .unwrap_or(0);
 
-    match response {
-        Ok(response) => Ok(response),
-        Err((err, response)) => Ok(err.inspect(|e| log::error!("{}", e)).to_http(response)),
+    if let Err(err) = ret {
+        err.inspect(|e| log::error!("{}", e))
+            .set_response(&mut request, &mut response, config)
+            .await
+            .expect("in err.set_response()");
     }
-    .inspect_ok(|res| {
+
+    Ok(response).inspect_ok(|res| {
         log::info!(
             "<-- {} {} {} {}ms",
             req_method,
@@ -165,21 +165,21 @@ impl ComponentLifecycle for HttpServer {
         self.stopped_reciever.replace(stopped_rx);
 
         let resolver = Arc::clone(&self.resolver);
-        let madome_auth_url = self.config.madome_auth_url().to_owned();
+        let config = Arc::clone(&self.config);
 
         let port = self.config.port();
 
         tokio::spawn(async move {
             let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
-            let svc = |resolver: Arc<Resolver>, madome_auth_url: String| async move {
+            let svc = |resolver: Arc<Resolver>, config: Arc<Config>| async move {
                 Ok::<_, Infallible>(service_fn(move |request| {
-                    service(request, resolver.clone(), madome_auth_url.clone())
+                    service(request, resolver.clone(), config.clone())
                 }))
             };
 
             let server = Server::bind(&addr).serve(make_service_fn(move |_| {
-                svc(resolver.clone(), madome_auth_url.clone())
+                svc(resolver.clone(), config.clone())
             }));
 
             let server = Server::with_graceful_shutdown(server, async {

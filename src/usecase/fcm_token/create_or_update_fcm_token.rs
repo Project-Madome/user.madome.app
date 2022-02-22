@@ -1,13 +1,12 @@
 use hyper::{Body, Request};
 use serde::Deserialize;
 use std::sync::Arc;
-use util::{r#async::AsyncTryFrom, FromRequest};
+use util::{BodyParser, FromRequest};
 use uuid::Uuid;
 
 use crate::{
     entity::fcm_token::FcmToken,
     error::UseCaseError,
-    msg::Wrap,
     repository::{r#trait::FcmTokenRepository, RepositorySet},
 };
 
@@ -20,15 +19,15 @@ pub struct Payload {
 }
 
 #[async_trait::async_trait]
-impl FromRequest for Payload {
+impl<'a> FromRequest<'a> for Payload {
     type Error = crate::Error;
     type Parameter = Uuid;
 
     async fn from_request(
         user_id: Self::Parameter,
-        request: Request<Body>,
+        request: &'a mut Request<Body>,
     ) -> Result<Self, Self::Error> {
-        let payload = Wrap::async_try_from(request).await?.inner();
+        let payload = request.body_parse().await?;
 
         Ok(Self { user_id, ..payload })
     }

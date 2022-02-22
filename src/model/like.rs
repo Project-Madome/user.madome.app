@@ -1,9 +1,13 @@
+use std::sync::Arc;
+
 use chrono::{DateTime, Utc};
-use hyper::{header, StatusCode};
+use hyper::{header, Body, Request, Response, StatusCode};
+use madome_sdk::api::auth;
 use serde::Serialize;
+use util::http::SetResponse;
 use uuid::Uuid;
 
-use crate::entity;
+use crate::{config::Config, entity};
 
 use super::Presenter;
 
@@ -37,21 +41,45 @@ pub enum LikeWithoutUserId {
     },
 }
 
+#[async_trait::async_trait]
 impl Presenter for Vec<Like> {
-    fn to_http(self, response: hyper::http::response::Builder) -> hyper::Response<hyper::Body> {
+    async fn set_response(
+        self,
+        request: &mut Request<Body>,
+        resp: &mut Response<Body>,
+        config: Arc<Config>,
+    ) -> crate::Result<()> {
+        /*  match auth::check_internal(request.headers()) {
+                   // for internal
+                   Ok(_) => {
+                       let like: Vec<LikeWithoutUserId> = self.into_iter().map(Into::into).collect();
+                       let serialized = serde_json::to_string(&like).expect("json serialize");
+
+                       resp.set_status(StatusCode::OK).unwrap();
+                       resp.set_header(header::CONTENT_TYPE, "application/json")
+                           .unwrap();
+                       resp.set_body(serialized.into());
+                   }
+                   // for external
+                   Err(_) => {
+                       // library
+                   }
+               }
+        */
         let like: Vec<LikeWithoutUserId> = self.into_iter().map(Into::into).collect();
         let serialized = serde_json::to_string(&like).expect("json serialize");
 
-        response
-            .status(StatusCode::OK)
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(serialized.into())
-            .unwrap()
+        resp.set_status(StatusCode::OK).unwrap();
+        resp.set_header(header::CONTENT_TYPE, "application/json")
+            .unwrap();
+        resp.set_body(serialized.into());
+
+        Ok(())
     }
 }
 
-impl Presenter for Like {
-    fn to_http(self, response: hyper::http::response::Builder) -> hyper::Response<hyper::Body> {
+/* impl Presenter for Like {
+    fn to_response(self, response: hyper::http::response::Builder) -> hyper::Response<hyper::Body> {
         let like: LikeWithoutUserId = self.into();
         let serialized = serde_json::to_string(&like).expect("json serialize");
 
@@ -61,7 +89,7 @@ impl Presenter for Like {
             .body(serialized.into())
             .unwrap()
     }
-}
+} */
 
 impl From<Like> for LikeWithoutUserId {
     fn from(like: Like) -> Self {

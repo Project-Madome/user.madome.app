@@ -6,9 +6,9 @@ pub enum Error {
     #[error("Not supported content-type: {0}")]
     NotSupportedContentType(String),
 
-    #[error("json deserialize: {0}")]
+    #[error("Json deserialize: {0}")]
     JsonDeserialize(serde_json::Error),
-    #[error("querystring deserialize: {0}")]
+    #[error("Querystring deserialize: {0}")]
     QuerystringDeserialize(serde_qs::Error),
 
     #[error("per-page: {0}")]

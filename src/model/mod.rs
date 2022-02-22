@@ -2,13 +2,17 @@ mod like;
 mod notification;
 mod user;
 
+use std::sync::Arc;
+
 pub use like::{Like, LikeWithoutUserId};
 pub use notification::Notification;
 pub use user::User;
 
-use hyper::{header, http::response::Builder as ResponseBuilder, Body, Response, StatusCode};
+use hyper::{header, Body, Request, Response, StatusCode};
+use util::http::SetResponse;
 
 use crate::{
+    config::Config,
     into_model, model,
     usecase::{
         create_like, create_notifications, create_or_update_fcm_token, create_user, delete_like,
@@ -31,60 +35,109 @@ into_model![
     (GetFcmTokens, get_fcm_tokens::Model),
 ];
 
+#[async_trait::async_trait]
 pub trait Presenter: Sized {
-    fn to_http(self, _response: ResponseBuilder) -> Response<Body> {
-        unimplemented!()
-    }
+    /// &mut Request를 받는 이유는 핸들러에서 body parse하는 과정에서 mutable이 필요하기 때문임
+    async fn set_response(
+        self,
+        request: &mut Request<Body>,
+        response: &mut Response<Body>,
+        config: Arc<Config>,
+    ) -> crate::Result<()>;
 }
 
+#[async_trait::async_trait]
 impl Presenter for create_user::Model {
-    fn to_http(self, response: ResponseBuilder) -> Response<Body> {
-        response.status(201).body(Body::empty()).unwrap()
+    async fn set_response(
+        self,
+        _request: &mut Request<Body>,
+        response: &mut Response<Body>,
+        _config: Arc<Config>,
+    ) -> crate::Result<()> {
+        response.set_status(StatusCode::CREATED).unwrap();
+        response.set_body(Body::empty());
+
+        Ok(())
     }
 }
 
+#[async_trait::async_trait]
 impl Presenter for create_like::Model {
-    fn to_http(self, response: ResponseBuilder) -> Response<Body> {
-        response.status(201).body(Body::empty()).unwrap()
+    async fn set_response(
+        self,
+        _request: &mut Request<Body>,
+        response: &mut Response<Body>,
+        _config: Arc<Config>,
+    ) -> crate::Result<()> {
+        response.set_status(StatusCode::CREATED).unwrap();
+        response.set_body(Body::empty());
+
+        Ok(())
     }
 }
 
+#[async_trait::async_trait]
 impl Presenter for delete_like::Model {
-    fn to_http(self, response: ResponseBuilder) -> Response<Body> {
-        response
-            .status(StatusCode::NO_CONTENT)
-            .body(Body::empty())
-            .unwrap()
+    async fn set_response(
+        self,
+        _request: &mut Request<Body>,
+        response: &mut Response<Body>,
+        _config: Arc<Config>,
+    ) -> crate::Result<()> {
+        response.set_status(StatusCode::NO_CONTENT).unwrap();
+        response.set_body(Body::empty());
+
+        Ok(())
     }
 }
 
+#[async_trait::async_trait]
 impl Presenter for create_notifications::Model {
-    fn to_http(self, response: ResponseBuilder) -> Response<Body> {
-        response
-            .status(StatusCode::CREATED)
-            .body(Body::empty())
-            .unwrap()
+    async fn set_response(
+        self,
+        _request: &mut Request<Body>,
+        response: &mut Response<Body>,
+        _config: Arc<Config>,
+    ) -> crate::Result<()> {
+        response.set_status(StatusCode::CREATED).unwrap();
+        response.set_body(Body::empty());
+
+        Ok(())
     }
 }
 
+#[async_trait::async_trait]
 impl Presenter for create_or_update_fcm_token::Model {
-    fn to_http(self, response: ResponseBuilder) -> Response<Body> {
-        response
-            .status(StatusCode::CREATED)
-            .body(Body::empty())
-            .unwrap()
+    async fn set_response(
+        self,
+        _request: &mut Request<Body>,
+        response: &mut Response<Body>,
+        _config: Arc<Config>,
+    ) -> crate::Result<()> {
+        response.set_status(StatusCode::CREATED).unwrap();
+        response.set_body(Body::empty());
+
+        Ok(())
     }
 }
 
+#[async_trait::async_trait]
 impl Presenter for get_fcm_tokens::Model {
-    fn to_http(self, response: ResponseBuilder) -> Response<Body> {
+    async fn set_response(
+        self,
+        _request: &mut Request<Body>,
+        response: &mut Response<Body>,
+        _config: Arc<Config>,
+    ) -> crate::Result<()> {
         let serialized = serde_json::to_string(&self.0).expect("json serialize");
 
+        response.set_status(StatusCode::OK).unwrap();
         response
-            .status(StatusCode::OK)
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(serialized.into())
-            .unwrap()
+            .set_header(header::CONTENT_TYPE, "application/json")
+            .unwrap();
+        response.set_body(serialized.into());
+
+        Ok(())
     }
 }
 
@@ -106,13 +159,14 @@ macro_rules! into_model {
         )*
 
 
+        #[async_trait::async_trait]
         impl Presenter for Model {
-            fn to_http(self, response: ResponseBuilder) -> hyper::Response<hyper::Body> {
+            async fn set_response(self, request: &mut Request<Body>, response: &mut Response<Body>, config: Arc<Config>) -> crate::Result<()> {
                 use Model::*;
 
                 match self {
                     $(
-                        $member(model) => model.to_http(response),
+                        $member(model) => model.set_response(request, response, config).await,
                     )*
                 }
             }

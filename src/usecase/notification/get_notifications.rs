@@ -57,13 +57,13 @@ impl Payload {
 }
 
 #[async_trait::async_trait]
-impl FromRequest for Payload {
+impl<'a> FromRequest<'a> for Payload {
     type Parameter = Uuid;
     type Error = crate::Error;
 
     async fn from_request(
         user_id: Self::Parameter,
-        request: Request<Body>,
+        request: &'a mut Request<Body>,
     ) -> Result<Self, Self::Error> {
         let qs = request.uri().query().unwrap_or_default();
         let payload: Payload =
@@ -114,7 +114,7 @@ pub async fn execute(
 #[cfg(test)]
 mod payload_tests {
     use hyper::{Body, Request};
-    use util::IntoPayload;
+    use util::ToPayload;
     use uuid::Uuid;
 
     use crate::payload::notification::{NotificationKind, NotificationSortBy};
@@ -129,9 +129,9 @@ mod payload_tests {
 
     #[tokio::test]
     async fn default() {
-        let request = request("/");
+        let mut request = request("/");
 
-        let payload: Payload = request.into_payload(USER_ID).await.unwrap();
+        let payload: Payload = request.to_payload(USER_ID).await.unwrap();
 
         let expected = Payload {
             per_page: Some(25),
@@ -146,9 +146,9 @@ mod payload_tests {
 
     #[tokio::test]
     async fn inject() {
-        let request = request("/?per-page=11&page=3&sort-by=created-at-asc&kind=book");
+        let mut request = request("/?per-page=11&page=3&sort-by=created-at-asc&kind=book");
 
-        let payload: Payload = request.into_payload(USER_ID).await.unwrap();
+        let payload: Payload = request.to_payload(USER_ID).await.unwrap();
 
         let expected = Payload {
             per_page: Some(11),
