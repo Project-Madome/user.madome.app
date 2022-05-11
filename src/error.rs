@@ -30,6 +30,9 @@ pub enum Error {
     #[error("AuthSdk: {0}")]
     AuthSdk(#[from] madome_sdk::api::auth::Error),
 
+    #[error("LibrarySdk: {0}")]
+    LibrarySdk(#[from] madome_sdk::api::library::Error),
+
     // TODO: 나중에 위치 재선정
     #[error("ReadChunksFromBody: {0}")]
     ReadChunksFromBody(#[from] hyper::Error),

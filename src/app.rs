@@ -11,6 +11,7 @@ use hyper::{
 use inspect::{Inspect, InspectOk};
 use sai::{Component, ComponentLifecycle, Injected};
 use tokio::sync::oneshot;
+use util::elapse;
 
 use crate::command::CommandSet;
 use crate::config::Config;
@@ -102,11 +103,14 @@ async fn handler(
     resolver: Arc<Resolver>,
     config: Arc<Config>,
 ) -> crate::Result<()> {
-    let msg = Msg::http(request, response, config.clone()).await?;
+    let msg = elapse!("route", Msg::http(request, response, config.clone()).await?);
 
-    let model = resolver.resolve(msg).await?;
+    let model = elapse!("execute", resolver.resolve(msg).await?);
 
-    let _r = model.set_response(request, response, config).await?;
+    let _r = elapse!(
+        "present",
+        model.set_response(request, response, config).await?
+    );
 
     Ok(())
 }

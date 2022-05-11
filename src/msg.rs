@@ -61,101 +61,122 @@ impl Msg {
         let access_token = cookie.get(MADOME_ACCESS_TOKEN).unwrap_or_default();
         let refresh_token = cookie.get(MADOME_REFRESH_TOKEN).unwrap_or_default(); */
 
+        let resp = RwLock::new(resp);
+
         let user_id = match auth::check_internal(headers) {
             Ok(_) => Uuid::nil(),
             Err(_) => {
                 // 사용자 토큰 추가
                 if let Some(cookie) = headers.get(header::COOKIE).cloned() {
+                    let mut resp = resp.write();
                     resp.set_header(header::COOKIE, cookie).unwrap();
                 }
 
-                let resp = RwLock::new(resp);
-
-                auth::check_and_refresh_token_pair(config.madome_auth_url(), &resp, 0)
+                auth::check_and_refresh_token_pair(config.auth_url(), &resp, 0)
                     .await?
                     .user_id
             }
         };
 
+        {
+            let resp = resp.read();
+
+            let headers = resp.headers();
+            let cookie = headers.get(header::SET_COOKIE);
+
+            log::debug!("why not updated token pair to cookie of response headers: {cookie:?}",);
+        }
+
         let method = request.method().clone();
         let path = request.uri().path();
         let user_checked = !user_id.is_nil();
 
-        match (method, path, user_checked) {
+        let msg = match (method, path, user_checked) {
             /* Public */
             (Method::POST, "/users", true) => {
                 let p = request.body_parse().await?;
 
-                Ok(Msg::CreateUser(p))
+                Msg::CreateUser(p)
             }
 
+            /* Public */
             (Method::GET, "/users/@me", true) => {
                 let p = get_user::Payload {
                     id_or_email: user_id.to_string(),
                 };
 
-                Ok(Msg::GetUser(p))
+                Msg::GetUser(p)
             }
 
+            /* Public */
             (Method::POST, "/users/@me/likes", true) => {
                 let mut p: create_like::Payload = request.body_parse().await?;
                 p.set_user_id(user_id);
 
-                Ok(Msg::CreateLike(p))
+                Msg::CreateLike(p)
             }
 
+            /* Public */
             (Method::GET, "/users/@me/likes", true) => {
                 let p = request.to_payload(user_id).await?;
 
-                Ok(Msg::GetLikes(p))
+                Msg::GetLikes(p)
             }
 
+            /* Public */
             (Method::DELETE, "/users/@me/likes", true) => {
                 let p = request.to_payload(user_id).await?;
 
-                Ok(Msg::DeleteLike(p))
+                Msg::DeleteLike(p)
             }
 
+            /* Public */
             (Method::GET, "/users/@me/notifications", true) => {
                 let p = request.to_payload(user_id).await?;
 
-                Ok(Msg::GetNotifications(p))
+                Msg::GetNotifications(p)
             }
 
+            /* Public */
             (Method::POST, "/users/@me/fcm-token", true) => {
                 let p = request.to_payload(user_id).await?;
 
-                Ok(Msg::CreateOrUpdateFcmToken(p))
+                Msg::CreateOrUpdateFcmToken(p)
             }
 
             /* Internal */
             (Method::GET, "/users/likes/book-tags", false) => {
                 let p = request.try_into()?;
 
-                Ok(Msg::GetLikesFromBookTags(p))
+                Msg::GetLikesFromBookTags(p)
             }
 
+            /* Internal */
             (Method::POST, "/users/notifications", false) => {
                 let p = request.body_parse().await?;
 
-                Ok(Msg::CreateNotifications(p))
+                Msg::CreateNotifications(p)
             }
 
+            /* Internal */
             (Method::GET, "/users/fcm-token", false) => {
                 let p = request.try_into()?;
 
-                Ok(Msg::GetFcmTokens(p))
+                Msg::GetFcmTokens(p)
             }
 
+            /* Internal */
             (Method::GET, path, false) if matcher(path, "/users/:user_id_or_email") => {
                 let p: get_user::Payload =
                     PathVariable::from((path, "/users/:user_id_or_email")).into();
 
-                Ok(Msg::GetUser(p))
+                Msg::GetUser(p)
             }
 
-            _ => Err(Error::NotFound.into()),
-        }
+            _ => return Err(Error::NotFound.into()),
+        };
+
+        Ok(msg)
     }
 }
 

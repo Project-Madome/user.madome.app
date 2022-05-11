@@ -24,6 +24,7 @@ pub struct Config {
     postgres_pw: Option<String>,
     postgres_db: Option<String>, */
     madome_auth_url: Option<String>,
+    madome_library_url: Option<String>,
 }
 
 #[async_trait::async_trait]
@@ -46,6 +47,8 @@ impl ComponentLifecycle for Config {
 
         self.madome_auth_url.replace(env("MADOME_AUTH_URL"));
 
+        self.madome_library_url.replace(env("MADOME_LIBRARY_URL"));
+
         log::info!("{:?}", self);
     }
 }
@@ -59,7 +62,11 @@ impl Config {
         self.postgres_url.as_ref().unwrap()
     }
 
-    pub fn madome_auth_url(&self) -> &str {
+    pub fn auth_url(&self) -> &str {
         self.madome_auth_url.as_ref().unwrap()
+    }
+
+    pub fn library_url(&self) -> &str {
+        self.madome_library_url.as_ref().unwrap()
     }
 }

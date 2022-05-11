@@ -86,15 +86,16 @@ impl From<Error> for crate::Error {
     }
 }
 
-pub async fn execute(p: Payload, repository: Arc<RepositorySet>) -> crate::Result<Model> {
-    let Payload {
+pub async fn execute(
+    Payload {
         kind,
         user_id,
         per_page,
         page,
         sort_by,
-    } = p.check()?;
-
+    }: Payload,
+    repository: Arc<RepositorySet>,
+) -> crate::Result<Model> {
     let r = repository
         .like()
         .get_many(
