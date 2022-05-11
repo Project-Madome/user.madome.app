@@ -194,15 +194,14 @@ impl NotificationRepository for PostgresqlNotificationRepository {
 
                                 let values = notifications_book
                                     .into_iter()
-                                    .map(|x| {
+                                    .flat_map(|x| {
                                         vec![
                                             x.id.unwrap().into(),
                                             x.book_id.unwrap().into(),
                                             x.user_id.unwrap().into(),
                                             x.created_at.unwrap().into(),
                                         ]
-                                    })
-                                    .flatten();
+                                    });
 
                                 let query = format!(
                                     "INSERT INTO {} ({}, {}, {}, {}) VALUES {} ON CONFLICT (id) DO NOTHING",
@@ -239,15 +238,14 @@ impl NotificationRepository for PostgresqlNotificationRepository {
 
                                 let values = notifications_book_tag
                                     .into_iter()
-                                    .map(|x| {
+                                    .flat_map(|x| {
                                         vec![
                                             x.id.unwrap().into(),
                                             x.notification_book_id.unwrap().into(),
                                             x.tag_kind.unwrap().into(),
                                             x.tag_name.unwrap().into(),
                                         ]
-                                    })
-                                    .flatten();
+                                    });
 
                                 let query = format!(
                                     "INSERT INTO {} ({}, {}, {}, {}) VALUES {} ON CONFLICT (id) DO NOTHING",

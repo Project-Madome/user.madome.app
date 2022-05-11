@@ -23,9 +23,9 @@ pub enum Notification {
 impl Presenter for Vec<Notification> {
     async fn set_response(
         self,
-        request: &mut Request<Body>,
+        _request: &mut Request<Body>,
         resp: &mut Response<Body>,
-        config: Arc<Config>,
+        _config: Arc<Config>,
     ) -> crate::Result<()> {
         let serialized = serde_json::to_string(&self).expect("serialize json");
 

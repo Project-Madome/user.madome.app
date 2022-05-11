@@ -2,13 +2,12 @@ use serde::Deserialize;
 use std::{collections::BTreeMap, sync::Arc};
 
 use crate::{
-    command::{send_notification::Message, CommandSet},
+    command::CommandSet,
     entity::{Notification, NotificationKind},
     error::UseCaseError,
     model::Like,
-    release,
     repository::{r#trait::NotificationRepository, RepositorySet},
-    usecase::{get_fcm_tokens, get_likes_from_book_tags},
+    usecase::get_likes_from_book_tags,
 };
 
 #[cfg_attr(test, derive(PartialEq))]
@@ -33,10 +32,11 @@ impl From<Error> for crate::Error {
     }
 }
 
+/// Book: Library 서버에서 작품이 업로드될때마다 해당 api에 작품 id와 타이틀, 태그를 전달함
 pub async fn execute(
     p: Payload,
     repository: Arc<RepositorySet>,
-    command: Arc<CommandSet>,
+    #[allow(unused_variables)] command: Arc<CommandSet>,
 ) -> crate::Result<Model> {
     match p {
         Payload::Book {
@@ -44,15 +44,13 @@ pub async fn execute(
             book_id,
             book_title,
         } => {
-            /* let book_tags = notifications
-            .iter()
-            .map(|x| x.book_tags.clone())
-            .flatten()
-            .collect::<Vec<_>>(); */
+            #[allow(unused_variables)]
+            let book_title = book_title;
 
             let p = get_likes_from_book_tags::Payload { book_tags };
             let likes = get_likes_from_book_tags::execute(p, repository.clone()).await?;
 
+            // group by user id and book id
             let group_by = likes.into_iter().fold(BTreeMap::new(), |mut acc, like| {
                 if let Like::BookTag {
                     user_id,
@@ -83,7 +81,10 @@ pub async fn execute(
                 .add_many(NotificationKind::Book, notifications.clone())
                 .await?;
 
-            if release() {
+            #[cfg(feature = "fcm")]
+            {
+                use crate::{command::send_notification::Message, usecase::get_fcm_tokens};
+
                 let user_ids = notifications.iter().map(|x| x.user_id()).collect();
 
                 let p = get_fcm_tokens::Payload { user_ids };
@@ -96,7 +97,7 @@ pub async fn execute(
                     command
                         .send_notification(
                             fcm_tokens,
-                            Message::new("좋아할만한 작품이 올라왔어요.", book_title),
+                            Message::new("좋아하실만한 작품이 올라왔어요.", book_title),
                         )
                         .await
                         .ok();
