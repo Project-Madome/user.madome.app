@@ -25,7 +25,7 @@ impl History {
     pub fn book_id(&self) -> Option<u32> {
         match self {
             Self::Book { book_id, .. } => Some(*book_id),
-            _ => None,
+            // _ => None,
         }
     }
 }
@@ -48,11 +48,6 @@ impl From<entity::History> for History {
     }
 }
 
-// TODO: 작명에 대해서 다시 생각해보자
-// 지금 지어야 하는 이름이
-// 원본
-// 밖에 줄 데이터
-// 밖에 줄 데이터 + 해당 데이터가 의존하는 외부 데이터를 포함
 #[derive(Debug, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum ReducedHistory {
@@ -85,9 +80,9 @@ impl From<History> for ReducedHistory {
 pub enum ExtendedHistory {
     Book {
         book_id: u32,
-        book: library::model::Book,
         created_at: DateTime<Utc>,
         updated_at: DateTime<Utc>,
+        book: library::model::Book,
     },
 }
 
@@ -127,9 +122,9 @@ impl Presenter for Vec<History> {
                             ..
                         } => ExtendedHistory::Book {
                             book_id,
-                            book,
                             created_at,
                             updated_at,
+                            book,
                         },
                     })
                     .collect::<Vec<_>>();

@@ -183,7 +183,8 @@ impl Presenter for Vec<Like> {
 
                 let likes = self
                     .into_iter()
-                    .map(|x| match x {
+                    // Library에서 가져올 수 있는 작품만 필터링함
+                    .filter_map(|x| match x {
                         Like::Book {
                             book_id,
                             created_at,
@@ -191,18 +192,25 @@ impl Presenter for Vec<Like> {
                         } => {
                             let book = books.remove(&book_id);
 
-                            match book {
-                                Some(book) => ExtendedLike::Book {
+                            book.map(|x| ExtendedLike::Book {
+                                book_id,
+                                created_at,
+                                book: x,
+                            })
+
+                            /* match book {
+                                Some(book) => Some(ExtendedLike::Book {
                                     book_id,
                                     created_at,
                                     book,
-                                },
+                                }),
                                 None => {
                                     // TODO: LIKE을 추가할 때 있는 작품인지 검증을 하거나
                                     // 아니면 아예 응답을 줄 때 없는 작품이면 filter_map()으로 제외를 시켜버리자
-                                    panic!("why hasn't book {book_id}");
+                                    // panic!("why hasn't book {book_id}");
+                                    None
                                 }
-                            }
+                            } */
                         }
                         Like::BookTag {
                             tag_kind,
@@ -217,14 +225,14 @@ impl Presenter for Vec<Like> {
                             // TODO: LIKE을 추가할 때 있는 태그인지 아닌지 검증을 하게 될 경우에는 panic!을 일으키는 게 맞을까?
                             // 여기서 panic!을 일으켜서 요청 자체가 죽어버리는 거 보다는
                             // 일단 있다가 없어질 가능성을 생각해서 빈 배열을 주는 게 맞다고 봄
-                            let books = books_group_by_tags.remove(&tag).unwrap_or_default(); //.expect("why hasn't book?");
+                            let books = books_group_by_tags.remove(&tag); // .unwrap_or_default(); //.expect("why hasn't book?");
 
-                            ExtendedLike::BookTag {
+                            books.map(|xs| ExtendedLike::BookTag {
                                 tag_kind: tag.0,
                                 tag_name: tag.1,
-                                books,
+                                books: xs,
                                 created_at,
-                            }
+                            })
                         }
                     })
                     .collect::<Vec<_>>();
