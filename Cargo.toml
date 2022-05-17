@@ -19,14 +19,14 @@ dotenv = "0.15"
 chrono = { version = "0.4", features = ["serde"] }
 log = "0.4"
 simple_logger = "2.1"
-sea-orm = { version = "0.6", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "sqlx-chrono", "sqlx-uuid"], default-features = false }
+sea-orm = { version = "0.8", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "sqlx-chrono", "sqlx-uuid"], default-features = false }
 openssl = { version = "0.10", features = ["vendored"] }
 itertools = "0.10"
 querystring = "1.1"
 serde_qs = "0.8"
 inspect = { git = "https://github.com/syrflover/inspect-rs" }
 fcm-sdk = { git = "https://github.com/syrflover/fcm-rust", tag = "0.1.0" }
-util = { git = "https://github.com/syrflover/util-rs", tag = "0.2.8" }
+util = { git = "https://github.com/syrflover/util-rs", tag = "0.3.0" }
 # util = { path = "../util" }
 madome-sdk = { git = "https://github.com/Project-Madome/madome-sdk-rs", tag = "0.4.0", features = ["server"] }
 # madome-sdk = { path = "../madome-sdk", features = ["server"] }
