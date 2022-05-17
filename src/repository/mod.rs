@@ -32,6 +32,9 @@ pub struct RepositorySet {
 
     #[injected]
     fcm_token_repository: Injected<PostgresqlFcmTokenRepository>,
+
+    #[injected]
+    history_repository: Injected<PostgresqlHistoryRepository>,
 }
 
 impl RepositorySet {
@@ -49,5 +52,9 @@ impl RepositorySet {
 
     pub fn fcm_token(&self) -> Arc<impl r#trait::FcmTokenRepository> {
         Arc::clone(&self.fcm_token_repository)
+    }
+
+    pub fn history(&self) -> Arc<impl r#trait::HistoryRepository> {
+        Arc::clone(&self.history_repository)
     }
 }

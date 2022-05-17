@@ -19,8 +19,9 @@ use crate::model::{Model, Presenter};
 use crate::msg::Msg;
 use crate::repository::RepositorySet;
 use crate::usecase::{
-    create_like, create_notifications, create_or_update_fcm_token, create_user, delete_like,
-    get_fcm_tokens, get_likes, get_likes_from_book_tags, get_notifications, get_user,
+    create_like, create_notifications, create_or_update_fcm_token, create_or_update_history,
+    create_user, delete_history, delete_like, get_fcm_tokens, get_histories, get_likes,
+    get_likes_from_book_tags, get_notifications, get_user,
 };
 
 #[derive(Component)]
@@ -76,6 +77,18 @@ impl Resolver {
             Msg::GetFcmTokens(payload) => {
                 get_fcm_tokens::execute(payload, repository).await?.into()
             }
+
+            Msg::CreateOrUpdateHistory(payload) => {
+                create_or_update_history::execute(payload, repository)
+                    .await?
+                    .into()
+            }
+
+            Msg::DeleteHistory(payload) => {
+                delete_history::execute(payload, repository).await?.into()
+            }
+
+            Msg::GetHistories(payload) => get_histories::execute(payload, repository).await?.into(),
         };
 
         Ok(model)

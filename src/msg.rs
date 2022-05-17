@@ -16,8 +16,9 @@ use uuid::Uuid;
 use crate::{
     config::Config,
     usecase::{
-        create_like, create_notifications, create_or_update_fcm_token, create_user, delete_like,
-        get_fcm_tokens, get_likes, get_likes_from_book_tags, get_notifications, get_user,
+        create_like, create_notifications, create_or_update_fcm_token, create_or_update_history,
+        create_user, delete_history, delete_like, get_fcm_tokens, get_histories, get_likes,
+        get_likes_from_book_tags, get_notifications, get_user,
     },
 };
 
@@ -46,6 +47,10 @@ pub enum Msg {
 
     CreateOrUpdateFcmToken(create_or_update_fcm_token::Payload),
     GetFcmTokens(get_fcm_tokens::Payload),
+
+    CreateOrUpdateHistory(create_or_update_history::Payload),
+    DeleteHistory(delete_history::Payload),
+    GetHistories(get_histories::Payload),
 }
 
 impl Msg {
@@ -110,8 +115,7 @@ impl Msg {
 
             /* Public */
             (Method::POST, "/users/@me/likes", true) => {
-                let mut p: create_like::Payload = request.body_parse().await?;
-                p.set_user_id(user_id);
+                let p: create_like::Payload = request.body_parse().await?;
 
                 Msg::CreateLike(p)
             }
@@ -142,6 +146,27 @@ impl Msg {
                 let p = request.to_payload(user_id).await?;
 
                 Msg::CreateOrUpdateFcmToken(p)
+            }
+
+            /* Public */
+            (Method::POST, "/users/@me/histories", true) => {
+                let p = request.to_payload(user_id).await?;
+
+                Msg::CreateOrUpdateHistory(p)
+            }
+
+            /* Public */
+            (Method::DELETE, "/users/@me/histories", true) => {
+                let p = request.to_payload(user_id).await?;
+
+                Msg::DeleteHistory(p)
+            }
+
+            /* Public */
+            (Method::GET, "/users/@me/histories", true) => {
+                let p = request.to_payload(user_id).await?;
+
+                Msg::GetHistories(p)
             }
 
             /* Internal */

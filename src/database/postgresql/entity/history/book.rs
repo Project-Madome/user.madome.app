@@ -1,24 +1,21 @@
-use sea_orm::{
-    prelude::*,
-    sea_query::{ColumnDef, ForeignKey, ForeignKeyAction, Table},
-    ConnectionTrait, DeriveEntityModel, DeriveRelation, EnumIter,
-};
-use uuid::Uuid;
+use sea_orm::sea_query::{ColumnDef, ForeignKey, Table};
+use sea_orm::{prelude::*, ConnectionTrait};
 
 use crate::database::postgresql::entity;
-use crate::entity::Like;
+use crate::entity::History;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
-#[sea_orm(table_name = "likes_book")]
+#[sea_orm(table_name = "histories_book")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: Uuid,
     pub book_id: i32,
     pub user_id: Uuid,
     pub created_at: DateTimeUtc,
+    pub updated_at: DateTimeUtc,
 }
 
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+#[derive(Clone, Copy, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(
         belongs_to = "entity::user::Entity",
@@ -31,12 +28,13 @@ pub enum Relation {
 
 impl ActiveModelBehavior for ActiveModel {}
 
-impl From<Model> for Like {
+impl From<Model> for History {
     fn from(
         Model {
             book_id,
             user_id,
             created_at,
+            updated_at,
             ..
         }: Model,
     ) -> Self {
@@ -44,19 +42,21 @@ impl From<Model> for Like {
             book_id: book_id as u32,
             user_id,
             created_at,
+            updated_at,
         }
     }
 }
 
-impl From<Like> for ActiveModel {
-    fn from(like: Like) -> Self {
+impl From<History> for ActiveModel {
+    fn from(history: History) -> Self {
         use sea_orm::ActiveValue::*;
 
-        match like {
-            Like::Book {
+        match history {
+            History::Book {
                 book_id,
                 user_id,
                 created_at,
+                updated_at,
             } => {
                 let id = {
                     let x = format!("{book_id}{user_id}");
@@ -68,9 +68,9 @@ impl From<Like> for ActiveModel {
                     book_id: Set(book_id as i32),
                     user_id: Set(user_id),
                     created_at: Set(created_at),
+                    updated_at: Set(updated_at),
                 }
-            }
-            _ => unreachable!(), // TODO: add message to panic!
+            } // _ => unreachable!(), // TODO: add message to panic!
         }
     }
 }
@@ -87,6 +87,11 @@ pub async fn create_table(db: &DatabaseConnection) {
                 .timestamp_with_time_zone()
                 .not_null(),
         )
+        .col(
+            ColumnDef::new(Column::UpdatedAt)
+                .timestamp_with_time_zone()
+                .not_null(),
+        )
         .foreign_key(
             ForeignKey::create()
                 .name(Column::UserId.as_str())
@@ -99,5 +104,5 @@ pub async fn create_table(db: &DatabaseConnection) {
     let builder = db.get_database_backend();
     db.execute(builder.build(&stmt))
         .await
-        .expect("create entity::like::book table");
+        .expect("create entity::history::book table");
 }

@@ -47,7 +47,7 @@ impl Like {
 
 #[derive(Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum LikeWithoutUserId {
+pub enum ReducedLike {
     Book {
         book_id: u32,
         created_at: DateTime<Utc>,
@@ -61,7 +61,7 @@ pub enum LikeWithoutUserId {
 
 #[derive(Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum LikeWithBook {
+pub enum ExtendedLike {
     Book {
         book_id: u32,
         created_at: DateTime<Utc>,
@@ -75,7 +75,7 @@ pub enum LikeWithBook {
     },
 }
 
-impl LikeWithBook {
+impl ExtendedLike {
     /*     async fn from_like(
         like: Like,
         token: impl Into<Token<'_>>,
@@ -134,7 +134,7 @@ impl Presenter for Vec<Like> {
         let serialized = match take_origin_response(request.headers()) {
             // for internal
             true => {
-                let likes: Vec<LikeWithoutUserId> = self.into_iter().map(Into::into).collect();
+                let likes: Vec<ReducedLike> = self.into_iter().map(Into::into).collect();
                 serde_json::to_vec(&likes).expect("json serialize")
             }
             // for external
@@ -148,15 +148,33 @@ impl Presenter for Vec<Like> {
                 let book_ids = self.iter().filter_map(|x| x.book_id()).collect::<Vec<_>>();
 
                 let (books, mut books_group_by_tags) = futures::try_join!(
-                    library::get_books_by_ids(config.library_url(), Token::default(), book_ids),
-                    library::get_books_by_tags(
-                        config.library_url(),
-                        Token::default(),
-                        book_tags,
-                        3,
-                        1,
-                        library::payload::BookSortBy::IdDesc
-                    )
+                    async {
+                        if book_ids.is_empty() {
+                            Ok(Vec::new())
+                        } else {
+                            library::get_books_by_ids(
+                                config.library_url(),
+                                Token::default(),
+                                book_ids,
+                            )
+                            .await
+                        }
+                    },
+                    async {
+                        if book_tags.is_empty() {
+                            Ok(HashMap::new())
+                        } else {
+                            library::get_books_by_tags(
+                                config.library_url(),
+                                Token::default(),
+                                book_tags,
+                                3, // FIXME: querystring으로 인자를 받아야 되는데 인자 이름을 정해야 됨
+                                1, // FIXME:
+                                library::payload::BookSortBy::IdDesc,
+                            )
+                            .await
+                        }
+                    }
                 )?;
                 let mut books = books
                     .into_iter()
@@ -174,7 +192,7 @@ impl Presenter for Vec<Like> {
                             let book = books.remove(&book_id);
 
                             match book {
-                                Some(book) => LikeWithBook::Book {
+                                Some(book) => ExtendedLike::Book {
                                     book_id,
                                     created_at,
                                     book,
@@ -201,7 +219,7 @@ impl Presenter for Vec<Like> {
                             // 일단 있다가 없어질 가능성을 생각해서 빈 배열을 주는 게 맞다고 봄
                             let books = books_group_by_tags.remove(&tag).unwrap_or_default(); //.expect("why hasn't book?");
 
-                            LikeWithBook::BookTag {
+                            ExtendedLike::BookTag {
                                 tag_kind: tag.0,
                                 tag_name: tag.1,
                                 books,
@@ -300,7 +318,7 @@ impl Presenter for Vec<Like> {
     }
 } */
 
-impl From<Like> for LikeWithoutUserId {
+impl From<Like> for ReducedLike {
     fn from(like: Like) -> Self {
         match like {
             Like::Book {

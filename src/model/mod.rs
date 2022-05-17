@@ -1,10 +1,12 @@
+mod history;
 mod like;
 mod notification;
 mod user;
 
 use std::sync::Arc;
 
-pub use like::{Like, LikeWithoutUserId};
+pub use history::History;
+pub use like::{Like, ReducedLike};
 pub use notification::Notification;
 pub use user::User;
 
@@ -15,8 +17,8 @@ use crate::{
     config::Config,
     into_model, model,
     usecase::{
-        create_like, create_notifications, create_or_update_fcm_token, create_user, delete_like,
-        get_fcm_tokens,
+        create_like, create_notifications, create_or_update_fcm_token, create_or_update_history,
+        create_user, delete_history, delete_like, get_fcm_tokens,
     },
 };
 
@@ -33,6 +35,10 @@ into_model![
     //
     (CreateOrUpdateFcmToken, create_or_update_fcm_token::Model),
     (GetFcmTokens, get_fcm_tokens::Model),
+    //
+    (Histories, Vec<model::History>),
+    (CreateOrUpdateHistory, create_or_update_history::Model),
+    (DeleteHistory, delete_history::Model)
 ];
 
 #[async_trait::async_trait]
@@ -141,9 +147,39 @@ impl Presenter for get_fcm_tokens::Model {
     }
 }
 
+#[async_trait::async_trait]
+impl Presenter for create_or_update_history::Model {
+    async fn set_response(
+        self,
+        _request: &mut Request<Body>,
+        response: &mut Response<Body>,
+        _config: Arc<Config>,
+    ) -> crate::Result<()> {
+        response.set_status(StatusCode::CREATED).unwrap();
+        response.set_body(Body::empty());
+
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl Presenter for delete_history::Model {
+    async fn set_response(
+        self,
+        _request: &mut Request<Body>,
+        response: &mut Response<Body>,
+        _config: Arc<Config>,
+    ) -> crate::Result<()> {
+        response.set_status(StatusCode::NO_CONTENT).unwrap();
+        response.set_body(Body::empty());
+
+        Ok(())
+    }
+}
+
 #[macro_export]
 macro_rules! into_model {
-    ($(($member:ident, $from:ty)),*,) => {
+    ($(($member:ident, $from:ty)),*$(,)?) => {
         pub enum Model {
             $(
                 $member($from),

@@ -1,5 +1,5 @@
 use sai::{Component, ComponentLifecycle, Injected};
-use sea_orm::{sea_query::Expr, ConnectionTrait, EntityTrait, QueryFilter, Statement};
+use sea_orm::{sea_query::Expr, ConnectionTrait, EntityTrait, IdenStatic, QueryFilter, Statement};
 use uuid::Uuid;
 
 use crate::{
@@ -32,15 +32,18 @@ impl FcmTokenRepository for PostgresqlFcmTokenRepository {
             fcm_token,
         }: FcmToken,
     ) -> crate::Result<()> {
-        let query = r#"
+        let query = format!(
+            r#"
             INSERT INTO
-                fcm_token(udid, user_id, fcm_token, updated_at)
+                {table_name}(udid, user_id, fcm_token, updated_at)
             VALUES
                 ($1, $2, $3, now())
             ON CONFLICT (udid)
                 DO UPDATE
                     SET fcm_token = $3
-        "#;
+        "#,
+            table_name = fcm_token::Entity.as_str()
+        );
 
         let db = self.database.postgresql();
 
@@ -49,7 +52,7 @@ impl FcmTokenRepository for PostgresqlFcmTokenRepository {
         let _r = db
             .execute(Statement::from_sql_and_values(
                 psql,
-                query,
+                &query,
                 [udid.into(), user_id.into(), fcm_token.into()],
             ))
             .await?;

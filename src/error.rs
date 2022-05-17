@@ -8,8 +8,9 @@ use crate::{
     model::Presenter,
     payload,
     usecase::{
-        create_like, create_notifications, create_or_update_fcm_token, create_user, delete_like,
-        get_fcm_tokens, get_likes, get_likes_from_book_tags, get_notifications, get_user,
+        create_like, create_notifications, create_or_update_fcm_token, create_or_update_history,
+        create_user, delete_history, delete_like, get_fcm_tokens, get_histories, get_likes,
+        get_likes_from_book_tags, get_notifications, get_user,
     },
 };
 
@@ -100,6 +101,13 @@ pub enum UseCaseError {
     CreateOrUpdateFcmToken(#[from] create_or_update_fcm_token::Error),
     #[error("GetFcmTokens: {0}")]
     GetFcmTokens(#[from] get_fcm_tokens::Error),
+
+    #[error("CreateOrUpdateHistory: {0}")]
+    CreateOrUpdateHistory(#[from] create_or_update_history::Error),
+    #[error("GetHistories: {0}")]
+    GetHistories(#[from] get_histories::Error),
+    #[error("DeleteHistory: {0}")]
+    DeleteHistory(#[from] delete_history::Error),
 }
 
 #[async_trait::async_trait]
@@ -113,6 +121,7 @@ impl Presenter for Error {
         use crate::msg::Error::*;
         use create_like::Error::*;
         use create_user::Error::*;
+        use delete_history::Error::*;
         use delete_like::Error::*;
         use get_user::Error::*;
         use Error::*;
@@ -152,6 +161,10 @@ impl Presenter for Error {
             UseCase(DeleteLike(err @ NotFoundLike)) => {
                 resp.set_status(StatusCode::NOT_FOUND).unwrap();
                 resp.set_body(err.to_string().into());
+            }
+            UseCase(DeleteHistory(err @ NotFoundHistory)) => {
+                resp.set_status(StatusCode::NOT_FOUND).unwrap();
+                resp.set_body(err.to_string().into())
             }
             AuthSdk(ref err) => {
                 use madome_sdk::api::{auth::Error as AuthError, BaseError};

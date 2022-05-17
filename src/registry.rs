@@ -9,7 +9,7 @@ mod root_registry {
         config::Config,
         database::DatabaseSet,
         repository::{
-            PostgresqlFcmTokenRepository, PostgresqlLikeRepository,
+            PostgresqlFcmTokenRepository, PostgresqlHistoryRepository, PostgresqlLikeRepository,
             PostgresqlNotificationRepository, PostgresqlUserRepository, RepositorySet,
         },
     };
@@ -37,7 +37,8 @@ mod root_registry {
             PostgresqlUserRepository,
             PostgresqlLikeRepository,
             PostgresqlNotificationRepository,
-            PostgresqlFcmTokenRepository
+            PostgresqlFcmTokenRepository,
+            PostgresqlHistoryRepository
         ]
     );
 
