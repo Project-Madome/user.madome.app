@@ -15,6 +15,7 @@ use util::elapse;
 
 use crate::command::CommandSet;
 use crate::config::Config;
+use crate::database::DatabaseSet;
 use crate::model::{Model, Presenter};
 use crate::msg::Msg;
 use crate::repository::RepositorySet;
@@ -105,6 +106,10 @@ pub struct HttpServer {
     #[injected]
     config: Injected<Config>,
 
+    /// for database migration
+    #[injected]
+    database: Injected<DatabaseSet>,
+
     stop_sender: Option<oneshot::Sender<()>>,
 
     stopped_reciever: Option<oneshot::Receiver<()>>,
@@ -174,6 +179,9 @@ impl ComponentLifecycle for HttpServer {
 
         self.tx.replace(tx);
         self.rx.replace(rx); */
+
+        // TODO: 현재로서는 데이터베이스 마이그레이션을 놓기에는 최적의 위치인데 나중에 다시 생각해보자
+        migration::up(self.database.postgresql()).await;
 
         let (stop_tx, stop_rx) = oneshot::channel();
         let (stopped_tx, stopped_rx) = oneshot::channel();

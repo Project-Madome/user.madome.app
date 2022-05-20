@@ -1,0 +1,16 @@
+[package]
+name = "migration"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "migration"
+path = "src/lib.rs"
+
+[dependencies]
+uuid = "1.0.0"
+chrono = "0.4.19"
+
+[dependencies.sea-orm-migration]
+version = "0.8"
