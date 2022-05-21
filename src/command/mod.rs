@@ -18,11 +18,13 @@ pub mod r#trait {
 
 #[derive(Component)]
 pub struct CommandSet {
+    #[allow(dead_code)]
     #[injected]
     send_notification: Injected<SendNotification>,
 }
 
 impl CommandSet {
+    #[allow(dead_code)]
     pub async fn send_notification(
         &self,
         tokens: Vec<String>,
