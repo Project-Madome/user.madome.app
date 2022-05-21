@@ -92,5 +92,6 @@ $RECYCLE.BIN/
 
 .env*
 bin/
+!migration/src/bin
 firebase.credential.json
 secret.yml

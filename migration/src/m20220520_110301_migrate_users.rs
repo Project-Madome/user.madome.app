@@ -7,7 +7,7 @@ pub struct Migration;
 
 impl MigrationName for Migration {
     fn name(&self) -> &str {
-        "m20220520_110301_migrate_reader_to_user"
+        "m20220520_110301_migrate_users"
     }
 }
 
@@ -57,7 +57,7 @@ impl MigrationTrait for Migration {
             .collect::<Result<Vec<_>, _>>()
             .expect("reader from query result"); */
 
-        user::create_table(conn).await;
+        // user::create_table(conn).await;
         // .expect("create table of user");
 
         let migrate_readers_to_users = format!(
@@ -65,7 +65,7 @@ impl MigrationTrait for Migration {
             INSERT INTO {table_name}(id, name, email, role, created_at, updated_at)
             SELECT id, username, email, role, created_at, created_at FROM reader
             "#,
-            table_name = user::Table.as_str()
+            table_name = "users" // user::Table.as_str()
         );
 
         conn.execute(Statement::from_sql_and_values(
@@ -84,7 +84,7 @@ impl MigrationTrait for Migration {
     }
 }
 
-mod user {
+/* mod user {
     use sea_orm_migration::sea_orm::{
         sea_query::{self, ColumnDef},
         ConnectionTrait, DatabaseConnection, Iden,
@@ -157,7 +157,7 @@ mod user {
             .await
             .expect("create user table");
     }
-}
+} */
 /*
 struct Reader {
     pub id: Uuid,

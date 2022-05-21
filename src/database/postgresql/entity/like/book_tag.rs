@@ -11,6 +11,7 @@ use crate::entity::Like;
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: Uuid,
+    // TODO: change string to enum, later
     pub tag_kind: String,
     pub tag_name: String,
     pub user_id: Uuid,
