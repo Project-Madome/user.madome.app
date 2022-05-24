@@ -19,6 +19,6 @@ impl MigratorTrait for Migrator {
     }
 }
 
-pub async fn up(db: &DatabaseConnection) {
-    Migrator::up(db, None).await.expect("migration");
+pub async fn up(db: &DatabaseConnection) -> Result<(), DbErr> {
+    Migrator::up(db, None).await
 }

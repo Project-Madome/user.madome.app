@@ -12,6 +12,7 @@ use inspect::{Inspect, InspectOk};
 use sai::{Component, ComponentLifecycle, Injected};
 use tokio::sync::oneshot;
 use util::elapse;
+use util::sea_orm::advisory_lock;
 
 use crate::command::CommandSet;
 use crate::config::Config;
@@ -175,13 +176,14 @@ async fn service(
 #[async_trait::async_trait]
 impl ComponentLifecycle for HttpServer {
     async fn start(&mut self) {
-        /* let (tx, rx) = mpsc::channel(8);
-
-        self.tx.replace(tx);
-        self.rx.replace(rx); */
-
         // TODO: 현재로서는 데이터베이스 마이그레이션을 놓기에는 최적의 위치인데 나중에 다시 생각해보자
-        migration::up(self.database.postgresql()).await;
+        advisory_lock(
+            self.config.postgres_url(),
+            self.database.postgresql(),
+            migration::up,
+        )
+        .await
+        .expect("failed to migration");
 
         let (stop_tx, stop_rx) = oneshot::channel();
         let (stopped_tx, stopped_rx) = oneshot::channel();
