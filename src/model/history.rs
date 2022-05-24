@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use chrono::{DateTime, Utc};
 use hyper::{header, Body, Request, Response, StatusCode};
@@ -104,16 +104,19 @@ impl Presenter for Vec<History> {
                 // TODO: kind가 추가로 생기게 되면 like과 비슷하게 hashmap에서 값을 빼오는 형식으로 순서를 같게 하면 될 듯
                 let book_ids = self.iter().filter_map(|x| x.book_id()).collect::<Vec<_>>();
 
-                let books = if book_ids.is_empty() {
+                let mut books = if book_ids.is_empty() {
                     Vec::new()
                 } else {
                     library::def::get_books_by_ids(config.library_url(), Token::default(), book_ids)
                         .await?
-                };
+                }
+                .into_iter()
+                .map(|x| (x.id, x))
+                .collect::<HashMap<_, _>>();
 
                 let histories = self
                     .into_iter()
-                    .zip(books)
+                    .filter_map(|x| x.book_id().and_then(|k| Some((x, books.remove(&k)?))))
                     .map(|(x, book)| match x {
                         History::Book {
                             book_id,
