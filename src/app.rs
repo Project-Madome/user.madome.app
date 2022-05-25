@@ -48,7 +48,9 @@ impl Resolver {
 
             Msg::GetUser(payload) => get_user::execute(payload, repository).await?.into(),
 
-            Msg::CreateLike(payload) => create_like::execute(payload, repository).await?.into(),
+            Msg::CreateLike(payload) => create_like::execute(payload, repository, command)
+                .await?
+                .into(),
 
             Msg::GetLikes(payload) => get_likes::execute(payload, repository).await?.into(),
 
@@ -81,7 +83,7 @@ impl Resolver {
             }
 
             Msg::CreateOrUpdateHistory(payload) => {
-                create_or_update_history::execute(payload, repository)
+                create_or_update_history::execute(payload, repository, command)
                     .await?
                     .into()
             }

@@ -6,6 +6,7 @@ use util::{BodyParser, FromRequest};
 use uuid::Uuid;
 
 use crate::{
+    command::CommandSet,
     entity::History,
     error::UseCaseError,
     repository::{r#trait::HistoryRepository, RepositorySet},
@@ -51,7 +52,10 @@ impl Payload {
 pub struct Model;
 
 #[derive(Debug, thiserror::Error)]
-pub enum Error {}
+pub enum Error {
+    #[error("Not found book in library")]
+    NotFoundBook,
+}
 
 impl From<Error> for crate::Error {
     fn from(err: Error) -> Self {
@@ -59,11 +63,21 @@ impl From<Error> for crate::Error {
     }
 }
 
-pub async fn execute(p: Payload, repository: Arc<RepositorySet>) -> crate::Result<Model> {
+pub async fn execute(
+    p: Payload,
+    repository: Arc<RepositorySet>,
+    command: Arc<CommandSet>,
+) -> crate::Result<Model> {
     use Payload::*;
 
     match p {
         Book { book_id, user_id } => {
+            let has_book = command.has_book(book_id).await?;
+
+            if !has_book {
+                return Err(Error::NotFoundBook.into());
+            }
+
             let _r = repository
                 .history()
                 .add_or_update(History::book(book_id, user_id))

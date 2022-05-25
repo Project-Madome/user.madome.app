@@ -6,6 +6,7 @@ use util::{BodyParser, FromRequest};
 use uuid::Uuid;
 
 use crate::{
+    command::CommandSet,
     entity::Like,
     error::UseCaseError,
     repository::{r#trait::LikeRepository, RepositorySet},
@@ -64,6 +65,12 @@ pub struct Model;
 pub enum Error {
     #[error("Already exists like")]
     AlreadyExistsLike,
+
+    #[error("Not found book in library")]
+    NotFoundBook,
+
+    #[error("Not found book tag in library")]
+    NotFoundBookTag,
 }
 
 impl From<Error> for crate::Error {
@@ -72,11 +79,24 @@ impl From<Error> for crate::Error {
     }
 }
 
-pub async fn execute(p: Payload, repository: Arc<RepositorySet>) -> crate::Result<Model> {
+pub async fn execute(
+    p: Payload,
+    repository: Arc<RepositorySet>,
+    command: Arc<CommandSet>,
+) -> crate::Result<Model> {
     use Payload::*;
+    // TODO: 책 검증 추가하고 api 문서에 응답코드 추가하기 not found book
 
     match p {
         Book { book_id, user_id } => {
+            let has_book = command.has_book(book_id).await?;
+
+            log::debug!("has_book = {has_book}");
+
+            if !has_book {
+                return Err(Error::NotFoundBook.into());
+            }
+
             let saved = repository.like().add(Like::book(user_id, book_id)).await?;
 
             if !saved {
@@ -91,6 +111,16 @@ pub async fn execute(p: Payload, repository: Arc<RepositorySet>) -> crate::Resul
             tag_name,
             user_id,
         } => {
+            let has_book_tag = command
+                .has_book_tag(tag_kind.clone(), tag_name.clone())
+                .await?;
+
+            log::debug!("has_book_tag = {has_book_tag}");
+
+            if !has_book_tag {
+                return Err(Error::NotFoundBookTag.into());
+            }
+
             let saved = repository
                 .like()
                 .add(Like::book_tag(user_id, tag_kind, tag_name))

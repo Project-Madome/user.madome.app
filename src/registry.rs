@@ -5,7 +5,10 @@ mod root_registry {
 
     use crate::{
         app::{HttpServer, Resolver},
-        command::{send_notification::SendNotification, CommandSet},
+        command::{
+            has_book::HasBook, has_book_tag::HasBookTag, send_notification::SendNotification,
+            CommandSet,
+        },
         config::Config,
         database::DatabaseSet,
         repository::{
@@ -42,7 +45,10 @@ mod root_registry {
         ]
     );
 
-    component_registry!(CommandRegistry, [CommandSet, SendNotification]);
+    component_registry!(
+        CommandRegistry,
+        [CommandSet, SendNotification, HasBook, HasBookTag]
+    );
 
     component_registry!(ConfigRegistry, [Config]);
 }

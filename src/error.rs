@@ -4,6 +4,7 @@ use hyper::{Body, Request, Response, StatusCode};
 use util::{body_parser, http::SetResponse};
 
 use crate::{
+    command::{has_book, has_book_tag},
     config::Config,
     model::Presenter,
     payload,
@@ -74,7 +75,13 @@ impl From<sea_orm::TransactionError<sea_orm::DbErr>> for crate::Error {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum CommandError {}
+pub enum CommandError {
+    #[error("HasBook: {0}")]
+    HasBook(#[from] has_book::Error),
+
+    #[error("HasBookTag: {0}")]
+    HasBookTag(#[from] has_book_tag::Error),
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum UseCaseError {
@@ -158,7 +165,18 @@ impl Presenter for Error {
                 resp.set_status(StatusCode::CONFLICT).unwrap();
                 resp.set_body(err.to_string().into());
             }
+            UseCase(CreateLike(
+                err @ create_like::Error::NotFoundBook | err @ create_like::Error::NotFoundBookTag,
+            )) => {
+                resp.set_status(StatusCode::NOT_FOUND).unwrap();
+                resp.set_body(err.to_string().into());
+            }
             UseCase(DeleteLike(err @ NotFoundLike)) => {
+                resp.set_status(StatusCode::NOT_FOUND).unwrap();
+                resp.set_body(err.to_string().into());
+            }
+
+            UseCase(CreateOrUpdateHistory(err @ create_or_update_history::Error::NotFoundBook)) => {
                 resp.set_status(StatusCode::NOT_FOUND).unwrap();
                 resp.set_body(err.to_string().into());
             }
@@ -166,6 +184,7 @@ impl Presenter for Error {
                 resp.set_status(StatusCode::NOT_FOUND).unwrap();
                 resp.set_body(err.to_string().into())
             }
+
             AuthSdk(ref err) => {
                 use madome_sdk::api::{auth::Error as AuthError, BaseError};
 
