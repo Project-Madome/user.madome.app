@@ -33,6 +33,7 @@ pub enum Error {
 /// Msg의 Payload는 실행되어야하는 usecase 순서에 따라 정해짐 (제일 처음 실행하는 usecase의 Payload)
 ///
 /// 실행되는 순서는 Resolver 참조
+#[derive(Debug)]
 pub enum Msg {
     CreateUser(create_user::Payload),
     GetUser(get_user::Payload),
@@ -115,7 +116,7 @@ impl Msg {
 
             /* Public */
             (Method::POST, "/users/@me/likes", true) => {
-                let p: create_like::Payload = request.body_parse().await?;
+                let p: create_like::Payload = request.to_payload(user_id).await?;
 
                 Msg::CreateLike(p)
             }
@@ -200,6 +201,8 @@ impl Msg {
 
             _ => return Err(Error::NotFound.into()),
         };
+
+        log::info!("{msg:?}");
 
         Ok(msg)
     }

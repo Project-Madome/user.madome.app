@@ -63,12 +63,16 @@ impl From<Like> for ActiveModel {
                     Uuid::new_v5(&Uuid::NAMESPACE_OID, x.as_bytes())
                 };
 
-                Self {
+                let r = Self {
                     id: Set(id),
                     book_id: Set(book_id as i32),
                     user_id: Set(user_id),
                     created_at: Set(created_at),
-                }
+                };
+
+                // log::debug!("like::book::{r:?}");
+
+                r
             }
             _ => unreachable!(), // TODO: add message to panic!
         }

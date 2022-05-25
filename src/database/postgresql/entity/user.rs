@@ -79,8 +79,18 @@ pub async fn create_table(db: &DatabaseConnection) {
         .table(Entity)
         .if_not_exists()
         .col(ColumnDef::new(Column::Id).uuid().primary_key())
-        .col(ColumnDef::new(Column::Name).string().unique_key())
-        .col(ColumnDef::new(Column::Email).string().unique_key())
+        .col(
+            ColumnDef::new(Column::Name)
+                .string()
+                .unique_key()
+                .not_null(),
+        )
+        .col(
+            ColumnDef::new(Column::Email)
+                .string()
+                .unique_key()
+                .not_null(),
+        )
         .col(ColumnDef::new(Column::Role).small_integer().not_null())
         .col(
             ColumnDef::new(Column::CreatedAt)
