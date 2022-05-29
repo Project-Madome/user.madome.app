@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use hyper::{header, Body, Method, Request, Response};
 
-use madome_sdk::api::auth;
+use madome_sdk::api::{auth, Token};
 use parking_lot::RwLock;
 use util::{
     http::{
@@ -78,20 +78,11 @@ impl Msg {
                     resp.set_header(header::COOKIE, cookie).unwrap();
                 }
 
-                auth::check_and_refresh_token_pair(config.auth_url(), &resp, 0)
+                auth::check_and_refresh_token_pair(config.auth_url(), Token::Store(&resp), 0)
                     .await?
                     .user_id
             }
         };
-
-        {
-            let resp = resp.read();
-
-            let headers = resp.headers();
-            let cookie = headers.get(header::SET_COOKIE);
-
-            log::debug!("why not updated token pair to cookie of response headers: {cookie:?}",);
-        }
 
         let method = request.method().clone();
         let path = request.uri().path();

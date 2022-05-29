@@ -85,7 +85,6 @@ pub async fn execute(
     command: Arc<CommandSet>,
 ) -> crate::Result<Model> {
     use Payload::*;
-    // TODO: 책 검증 추가하고 api 문서에 응답코드 추가하기 not found book
 
     match p {
         Book { book_id, user_id } => {
