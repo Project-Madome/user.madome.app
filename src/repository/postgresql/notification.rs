@@ -73,6 +73,8 @@ impl NotificationRepository for PostgresqlNotificationRepository {
             NotificationSortBy::CreatedAt(Sort::Asc) => r#""notifications_book"."created_at" ASC"#,
         };
 
+        // TODO: set table name to `nofitication::book::Entity.as_str()`
+        // 데이터 좀 쌓이면 그때 바꿔도 무관할 듯
         let query = format!(
             r#"
             SELECT
@@ -175,7 +177,7 @@ impl NotificationRepository for PostgresqlNotificationRepository {
                             Box::pin(async move {
                                 /* 
                                 
-                                    INSERT INTO notifications_book_tag
+                                    INSERT INTO notifications_book
                                 
                                 */
                                 let (values_query, _) = notifications_book.iter().fold(

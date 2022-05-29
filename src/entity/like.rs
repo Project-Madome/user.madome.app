@@ -38,7 +38,7 @@ pub enum Like {
 }
 
 impl Like {
-    /// constructor of book
+    /// constructor of Like::Book
     pub fn book(user_id: Uuid, book_id: u32) -> Self {
         Self::Book {
             book_id,
@@ -47,7 +47,7 @@ impl Like {
         }
     }
 
-    /// constructor of book_tag
+    /// constructor of Like::BookTag
     pub fn book_tag(user_id: Uuid, tag_kind: String, tag_name: String) -> Self {
         Self::BookTag {
             user_id,

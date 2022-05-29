@@ -93,17 +93,19 @@ impl LikeRepository for PostgresqlLikeRepository {
                     SELECT * FROM
                     (
                         SELECT id, user_id, book_id, NULL AS tag_kind, NULL AS tag_name, created_at
-                            FROM likes_book
+                            FROM {like_book_table}
                             WHERE user_id = $1
                         UNION ALL
                         SELECT id, user_id, NULL, tag_kind, tag_name, created_at
-                            FROM likes_book_tag
+                            FROM {like_book_tag_table}
                             WHERE user_id = $1
                     ) AS a
                     ORDER BY {sort_by}
                     LIMIT $2
                     OFFSET $3
                     "#,
+                    like_book_table = like::book::Entity.as_str(),
+                    like_book_tag_table = like::book_tag::Entity.as_str(),
                 );
 
                 let db = self.database.postgresql();

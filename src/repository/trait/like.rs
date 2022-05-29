@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::entity::{like::LikeSortBy, Like, LikeKind};
+use crate::entity::{Like, LikeKind, LikeSortBy};
 
 #[async_trait::async_trait]
 pub trait LikeRepository: Send + Sync {
