@@ -1,9 +1,11 @@
+pub mod dislike;
 pub mod fcm_token;
 pub mod history;
 pub mod like;
 pub mod notification;
 pub mod user;
 
+pub use dislike::{Dislike, DislikeKind, DislikeSortBy};
 pub use history::{History, HistoryKind, HistorySortBy};
 pub use like::{Like, LikeKind, LikeSortBy};
 pub use notification::{Notification, NotificationKind, NotificationSortBy};

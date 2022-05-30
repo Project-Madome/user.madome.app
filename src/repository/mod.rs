@@ -19,14 +19,15 @@ pub struct RepositorySet {
     #[injected]
     user_repository: Injected<InMemoryUserRepository>,
 
-    #[cfg(not(test))]
     #[injected]
     like_repository: Injected<PostgresqlLikeRepository>,
 
-    #[cfg(test)]
     #[injected]
-    like_repository: Injected<InMemoryLikeRepository>,
+    dislike_repository: Injected<PostgresqlDislikeRepository>,
 
+    /* #[cfg(test)]
+    #[injected]
+    like_repository: Injected<InMemoryLikeRepository>, */
     #[injected]
     notification_repository: Injected<PostgresqlNotificationRepository>,
 
@@ -44,6 +45,10 @@ impl RepositorySet {
 
     pub fn like(&self) -> Arc<impl r#trait::LikeRepository> {
         Arc::clone(&self.like_repository)
+    }
+
+    pub fn dislike(&self) -> Arc<impl r#trait::DislikeRepository> {
+        Arc::clone(&self.dislike_repository)
     }
 
     pub fn notification(&self) -> Arc<impl r#trait::NotificationRepository> {

@@ -1,19 +1,15 @@
-use sea_orm::{
-    entity::prelude::*,
-    sea_query::{ColumnDef, Table},
-    ConnectionTrait,
-};
+use sea_orm::{entity::prelude::*, ConnectionTrait, DbBackend, Schema};
 
 use crate::entity::User;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "users")]
 pub struct Model {
-    #[sea_orm(primary_key)]
+    #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
-    #[sea_orm(unique)]
+    #[sea_orm(unique, index)]
     pub name: String,
-    #[sea_orm(unique)]
+    #[sea_orm(unique, index)]
     pub email: String,
     #[sea_orm(column_type = "SmallInteger")]
     pub role: i16,
@@ -75,37 +71,44 @@ impl From<User> for ActiveModel {
 }
 
 pub async fn create_table(db: &DatabaseConnection) {
-    let smtm = Table::create()
-        .table(Entity)
+    /* let smtm = Table::create()
+    .table(Entity)
+    .if_not_exists()
+    .col(ColumnDef::new(Column::Id).uuid().primary_key())
+    .col(
+        ColumnDef::new(Column::Name)
+            .string()
+            .unique_key()
+            .not_null(),
+    )
+    .col(
+        ColumnDef::new(Column::Email)
+            .string()
+            .unique_key()
+            .not_null(),
+    )
+    .col(ColumnDef::new(Column::Role).small_integer().not_null())
+    .col(
+        ColumnDef::new(Column::CreatedAt)
+            .timestamp_with_time_zone()
+            .not_null(),
+    )
+    .col(
+        ColumnDef::new(Column::UpdatedAt)
+            .timestamp_with_time_zone()
+            .not_null(),
+    )
+    .to_owned(); */
+
+    let schema = Schema::new(DbBackend::Postgres);
+
+    let stmt = schema
+        .create_table_from_entity(Entity)
         .if_not_exists()
-        .col(ColumnDef::new(Column::Id).uuid().primary_key())
-        .col(
-            ColumnDef::new(Column::Name)
-                .string()
-                .unique_key()
-                .not_null(),
-        )
-        .col(
-            ColumnDef::new(Column::Email)
-                .string()
-                .unique_key()
-                .not_null(),
-        )
-        .col(ColumnDef::new(Column::Role).small_integer().not_null())
-        .col(
-            ColumnDef::new(Column::CreatedAt)
-                .timestamp_with_time_zone()
-                .not_null(),
-        )
-        .col(
-            ColumnDef::new(Column::UpdatedAt)
-                .timestamp_with_time_zone()
-                .not_null(),
-        )
         .to_owned();
 
     let builder = db.get_database_backend();
-    db.execute(builder.build(&smtm))
+    db.execute(builder.build(&stmt))
         .await
         .expect("create entity::user table");
 }

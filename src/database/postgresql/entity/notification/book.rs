@@ -1,16 +1,13 @@
-use sea_orm::{
-    prelude::*,
-    sea_query::{ColumnDef, ForeignKey, ForeignKeyAction, Table},
-    ConnectionTrait,
-};
+use sea_orm::{prelude::*, ConnectionTrait, DbBackend, Schema};
 
-use crate::{database::postgresql::entity::user, entity::Notification};
+use crate::entity::Notification;
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "notifications_book")]
 pub struct Model {
-    #[sea_orm(primary_key)]
+    #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
+    #[sea_orm(index)]
     pub book_id: i32,
     pub user_id: Uuid,
     pub created_at: DateTimeUtc,
@@ -82,24 +79,31 @@ impl From<(Model, Vec<tag::Model>)> for Notification {
 }
 
 pub async fn create_table(db: &DatabaseConnection) {
-    let stmt = Table::create()
-        .table(Entity)
+    /* let stmt = Table::create()
+    .table(Entity)
+    .if_not_exists()
+    .col(ColumnDef::new(Column::Id).uuid().primary_key())
+    .col(ColumnDef::new(Column::BookId).integer().not_null())
+    .col(ColumnDef::new(Column::UserId).uuid().not_null())
+    .col(
+        ColumnDef::new(Column::CreatedAt)
+            .timestamp_with_time_zone()
+            .not_null(),
+    )
+    .foreign_key(
+        ForeignKey::create()
+            .name(Column::UserId.as_str())
+            .from(Entity, Column::UserId)
+            .to(user::Entity, user::Column::Id)
+            .on_delete(ForeignKeyAction::Cascade),
+    )
+    .to_owned(); */
+
+    let schema = Schema::new(DbBackend::Postgres);
+
+    let stmt = schema
+        .create_table_from_entity(Entity)
         .if_not_exists()
-        .col(ColumnDef::new(Column::Id).uuid().primary_key())
-        .col(ColumnDef::new(Column::BookId).integer().not_null())
-        .col(ColumnDef::new(Column::UserId).uuid().not_null())
-        .col(
-            ColumnDef::new(Column::CreatedAt)
-                .timestamp_with_time_zone()
-                .not_null(),
-        )
-        .foreign_key(
-            ForeignKey::create()
-                .name(Column::UserId.as_str())
-                .from(Entity, Column::UserId)
-                .to(user::Entity, user::Column::Id)
-                .on_delete(ForeignKeyAction::Cascade),
-        )
         .to_owned();
 
     let psql = db.get_database_backend();
@@ -109,18 +113,14 @@ pub async fn create_table(db: &DatabaseConnection) {
 }
 
 pub mod tag {
-    use sea_orm::{
-        prelude::*,
-        sea_query::{ColumnDef, ForeignKey, ForeignKeyAction, Table},
-        ConnectionTrait,
-    };
+    use sea_orm::{prelude::*, ConnectionTrait, DbBackend, Schema};
 
     use crate::database::postgresql::entity::{self, notification};
 
     #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
     #[sea_orm(table_name = "notifications_book_tag")]
     pub struct Model {
-        #[sea_orm(primary_key)]
+        #[sea_orm(primary_key, auto_increment = false)]
         pub id: Uuid,
         pub notification_book_id: Uuid,
         pub tag_kind: String,
@@ -167,20 +167,27 @@ pub mod tag {
     }
 
     pub async fn create_table(db: &DatabaseConnection) {
-        let stmt = Table::create()
-            .table(Entity)
+        /* let stmt = Table::create()
+        .table(Entity)
+        .if_not_exists()
+        .col(ColumnDef::new(Column::Id).uuid().primary_key())
+        .col(ColumnDef::new(Column::NotificationBookId).uuid().not_null())
+        .col(ColumnDef::new(Column::TagKind).string().not_null())
+        .col(ColumnDef::new(Column::TagName).string().not_null())
+        .foreign_key(
+            ForeignKey::create()
+                .name(Column::NotificationBookId.as_str())
+                .from(Entity, Column::NotificationBookId)
+                .to(notification::book::Entity, notification::book::Column::Id)
+                .on_delete(ForeignKeyAction::Cascade),
+        )
+        .to_owned(); */
+
+        let schema = Schema::new(DbBackend::Postgres);
+
+        let stmt = schema
+            .create_table_from_entity(Entity)
             .if_not_exists()
-            .col(ColumnDef::new(Column::Id).uuid().primary_key())
-            .col(ColumnDef::new(Column::NotificationBookId).uuid().not_null())
-            .col(ColumnDef::new(Column::TagKind).string().not_null())
-            .col(ColumnDef::new(Column::TagName).string().not_null())
-            .foreign_key(
-                ForeignKey::create()
-                    .name(Column::NotificationBookId.as_str())
-                    .from(Entity, Column::NotificationBookId)
-                    .to(notification::book::Entity, notification::book::Column::Id)
-                    .on_delete(ForeignKeyAction::Cascade),
-            )
             .to_owned();
 
         let psql = db.get_database_backend();

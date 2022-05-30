@@ -1,5 +1,4 @@
-use sea_orm::sea_query::{ColumnDef, ForeignKey, Table};
-use sea_orm::{prelude::*, ConnectionTrait};
+use sea_orm::{prelude::*, ConnectionTrait, DbBackend, Schema};
 
 use crate::database::postgresql::entity;
 use crate::entity::History;
@@ -7,8 +6,9 @@ use crate::entity::History;
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "histories_book")]
 pub struct Model {
-    #[sea_orm(primary_key)]
+    #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
+    #[sea_orm(index)]
     pub book_id: i32,
     pub user_id: Uuid,
     pub created_at: DateTimeUtc,
@@ -76,29 +76,36 @@ impl From<History> for ActiveModel {
 }
 
 pub async fn create_table(db: &DatabaseConnection) {
-    let stmt = Table::create()
-        .table(Entity)
+    /* let stmt = Table::create()
+    .table(Entity)
+    .if_not_exists()
+    .col(ColumnDef::new(Column::Id).uuid().primary_key())
+    .col(ColumnDef::new(Column::BookId).integer().not_null())
+    .col(ColumnDef::new(Column::UserId).uuid().not_null())
+    .col(
+        ColumnDef::new(Column::CreatedAt)
+            .timestamp_with_time_zone()
+            .not_null(),
+    )
+    .col(
+        ColumnDef::new(Column::UpdatedAt)
+            .timestamp_with_time_zone()
+            .not_null(),
+    )
+    .foreign_key(
+        ForeignKey::create()
+            .name(Column::UserId.as_str())
+            .from(Entity, Column::UserId)
+            .to(entity::user::Entity, entity::user::Column::Id)
+            .on_delete(ForeignKeyAction::Cascade),
+    )
+    .to_owned(); */
+
+    let schema = Schema::new(DbBackend::Postgres);
+
+    let stmt = schema
+        .create_table_from_entity(Entity)
         .if_not_exists()
-        .col(ColumnDef::new(Column::Id).uuid().primary_key())
-        .col(ColumnDef::new(Column::BookId).integer().not_null())
-        .col(ColumnDef::new(Column::UserId).uuid().not_null())
-        .col(
-            ColumnDef::new(Column::CreatedAt)
-                .timestamp_with_time_zone()
-                .not_null(),
-        )
-        .col(
-            ColumnDef::new(Column::UpdatedAt)
-                .timestamp_with_time_zone()
-                .not_null(),
-        )
-        .foreign_key(
-            ForeignKey::create()
-                .name(Column::UserId.as_str())
-                .from(Entity, Column::UserId)
-                .to(entity::user::Entity, entity::user::Column::Id)
-                .on_delete(ForeignKeyAction::Cascade),
-        )
         .to_owned();
 
     let builder = db.get_database_backend();

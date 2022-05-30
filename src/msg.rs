@@ -127,6 +127,21 @@ impl Msg {
             }
 
             /* Public */
+            (Method::POST, "/users/@me/dislikes", true) => {
+                todo!()
+            }
+
+            /* Public */
+            (Method::GET, "/users/@me/dislikes", true) => {
+                todo!()
+            }
+
+            /* Public */
+            (Method::DELETE, "/users/@me/dislikes", true) => {
+                todo!()
+            }
+
+            /* Public */
             (Method::GET, "/users/@me/notifications", true) => {
                 let p = request.to_payload(user_id).await?;
 
@@ -188,6 +203,16 @@ impl Msg {
                     PathVariable::from((path, "/users/:user_id_or_email")).into();
 
                 Msg::GetUser(p)
+            }
+
+            /* Internal */
+            (Method::GET, path, false) if matcher(path, "/users/:user_id/likes") => {
+                todo!()
+            }
+
+            /* Internal */
+            (Method::GET, path, false) if matcher(path, "/users/:user_id/dislikes") => {
+                todo!()
             }
 
             _ => return Err(Error::NotFound.into()),

@@ -1,18 +1,12 @@
 use chrono::Utc;
-use sea_orm::{
-    prelude::*,
-    sea_query::{ColumnDef, ForeignKey, ForeignKeyAction, Table},
-    ConnectionTrait,
-};
+use sea_orm::{prelude::*, ConnectionTrait, DbBackend, Schema};
 
 use crate::entity::fcm_token::FcmToken;
-
-use super::user;
 
 #[derive(Debug, Clone, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "fcm_token")]
 pub struct Model {
-    #[sea_orm(primary_key)]
+    #[sea_orm(primary_key, auto_increment = false)]
     pub udid: Uuid,
     pub user_id: Uuid,
     pub fcm_token: String,
@@ -46,24 +40,31 @@ impl From<FcmToken> for ActiveModel {
 }
 
 pub async fn create_table(db: &DatabaseConnection) {
-    let stmt = Table::create()
-        .table(Entity)
+    /* let stmt = Table::create()
+    .table(Entity)
+    .if_not_exists()
+    .col(ColumnDef::new(Column::Udid).uuid().primary_key())
+    .col(ColumnDef::new(Column::UserId).uuid().not_null())
+    .col(ColumnDef::new(Column::FcmToken).string().not_null())
+    .col(
+        ColumnDef::new(Column::UpdatedAt)
+            .timestamp_with_time_zone()
+            .not_null(),
+    )
+    .foreign_key(
+        ForeignKey::create()
+            .name(Column::UserId.as_str())
+            .from(Entity, Column::UserId)
+            .to(user::Entity, user::Column::Id)
+            .on_delete(ForeignKeyAction::Cascade),
+    )
+    .to_owned(); */
+
+    let schema = Schema::new(DbBackend::Postgres);
+
+    let stmt = schema
+        .create_table_from_entity(Entity)
         .if_not_exists()
-        .col(ColumnDef::new(Column::Udid).uuid().primary_key())
-        .col(ColumnDef::new(Column::UserId).uuid().not_null())
-        .col(ColumnDef::new(Column::FcmToken).string().not_null())
-        .col(
-            ColumnDef::new(Column::UpdatedAt)
-                .timestamp_with_time_zone()
-                .not_null(),
-        )
-        .foreign_key(
-            ForeignKey::create()
-                .name(Column::UserId.as_str())
-                .from(Entity, Column::UserId)
-                .to(user::Entity, user::Column::Id)
-                .on_delete(ForeignKeyAction::Cascade),
-        )
         .to_owned();
 
     let psql = db.get_database_backend();

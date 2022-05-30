@@ -1,20 +1,20 @@
 use sea_orm::{
-    prelude::*,
-    sea_query::{ColumnDef, ForeignKey, ForeignKeyAction, Table},
-    ConnectionTrait, DeriveEntityModel, DeriveRelation, EnumIter,
+    prelude::*, ConnectionTrait, DbBackend, DeriveEntityModel, DeriveRelation, EnumIter, Schema,
 };
 use uuid::Uuid;
 
 use crate::database::postgresql::entity;
-use crate::entity::Like;
+use crate::entity::{Dislike, Like};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "likes_book")]
 pub struct Model {
-    #[sea_orm(primary_key)]
+    #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
+    #[sea_orm(index)]
     pub book_id: i32,
     pub user_id: Uuid,
+    pub is_dislike: bool,
     pub created_at: DateTimeUtc,
 }
 
@@ -31,16 +31,31 @@ pub enum Relation {
 
 impl ActiveModelBehavior for ActiveModel {}
 
-impl From<Model> for Like {
-    fn from(
-        Model {
+impl Model {
+    pub fn into_like(self) -> Like {
+        let Model {
             book_id,
             user_id,
             created_at,
             ..
-        }: Model,
-    ) -> Self {
-        Self::Book {
+        } = self;
+
+        Like::Book {
+            book_id: book_id as u32,
+            user_id,
+            created_at,
+        }
+    }
+
+    pub fn into_dislike(self) -> Dislike {
+        let Model {
+            book_id,
+            user_id,
+            created_at,
+            ..
+        } = self;
+
+        Dislike::Book {
             book_id: book_id as u32,
             user_id,
             created_at,
@@ -63,16 +78,51 @@ impl From<Like> for ActiveModel {
                     Uuid::new_v5(&Uuid::NAMESPACE_OID, x.as_bytes())
                 };
 
-                let r = Self {
+                /* let r =  */
+                Self {
                     id: Set(id),
                     book_id: Set(book_id as i32),
                     user_id: Set(user_id),
+                    is_dislike: Set(false),
                     created_at: Set(created_at),
-                };
+                }
 
                 // log::debug!("like::book::{r:?}");
 
-                r
+                // r
+            }
+            _ => unreachable!(), // TODO: add message to panic!
+        }
+    }
+}
+
+impl From<Dislike> for ActiveModel {
+    fn from(dislike: Dislike) -> Self {
+        use sea_orm::ActiveValue::*;
+
+        match dislike {
+            Dislike::Book {
+                book_id,
+                user_id,
+                created_at,
+            } => {
+                let id = {
+                    let x = format!("{book_id}{user_id}");
+                    Uuid::new_v5(&Uuid::NAMESPACE_OID, x.as_bytes())
+                };
+
+                /* let r =  */
+                Self {
+                    id: Set(id),
+                    book_id: Set(book_id as i32),
+                    user_id: Set(user_id),
+                    is_dislike: Set(true),
+                    created_at: Set(created_at),
+                }
+
+                // log::debug!("like::book::{r:?}");
+
+                // r
             }
             _ => unreachable!(), // TODO: add message to panic!
         }
@@ -80,25 +130,32 @@ impl From<Like> for ActiveModel {
 }
 
 pub async fn create_table(db: &DatabaseConnection) {
-    let stmt = Table::create()
-        .table(Entity)
+    let schema = Schema::new(DbBackend::Postgres);
+
+    let stmt = schema
+        .create_table_from_entity(Entity)
         .if_not_exists()
-        .col(ColumnDef::new(Column::Id).uuid().primary_key())
-        .col(ColumnDef::new(Column::BookId).integer().not_null())
-        .col(ColumnDef::new(Column::UserId).uuid().not_null())
-        .col(
-            ColumnDef::new(Column::CreatedAt)
-                .timestamp_with_time_zone()
-                .not_null(),
-        )
-        .foreign_key(
-            ForeignKey::create()
-                .name(Column::UserId.as_str())
-                .from(Entity, Column::UserId)
-                .to(entity::user::Entity, entity::user::Column::Id)
-                .on_delete(ForeignKeyAction::Cascade),
-        )
         .to_owned();
+
+    /* let stmt = Table::create()
+    .table(Entity)
+    .if_not_exists()
+    .col(ColumnDef::new(Column::Id).uuid().primary_key())
+    .col(ColumnDef::new(Column::BookId).integer().not_null())
+    .col(ColumnDef::new(Column::UserId).uuid().not_null())
+    .col(
+        ColumnDef::new(Column::CreatedAt)
+            .timestamp_with_time_zone()
+            .not_null(),
+    )
+    .foreign_key(
+        ForeignKey::create()
+            .name(Column::UserId.as_str())
+            .from(Entity, Column::UserId)
+            .to(entity::user::Entity, entity::user::Column::Id)
+            .on_delete(ForeignKeyAction::Cascade),
+    )
+    .to_owned(); */
 
     let builder = db.get_database_backend();
     db.execute(builder.build(&stmt))

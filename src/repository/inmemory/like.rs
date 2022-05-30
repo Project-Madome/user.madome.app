@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::{
     entity::{like::LikeSortBy, Like, LikeKind, Sort},
-    repository::r#trait::LikeRepository,
+    repository::r#trait::DislikeRepository,
 };
 
 #[cfg_attr(test, derive(Default))]
@@ -16,7 +16,7 @@ pub struct InMemoryLikeRepository {
 }
 
 #[async_trait::async_trait]
-impl LikeRepository for InMemoryLikeRepository {
+impl DislikeRepository for InMemoryLikeRepository {
     async fn get_many(
         &self,
         user_id: Uuid,
@@ -188,7 +188,7 @@ pub mod get_many {
 
     use crate::{
         entity::{like::LikeSortBy, Like, LikeKind, Sort},
-        repository::r#trait::LikeRepository,
+        repository::r#trait::DislikeRepository,
     };
 
     use super::InMemoryLikeRepository;
@@ -315,7 +315,7 @@ pub mod get_many_by_book_tags {
     use util::test_registry;
     use uuid::Uuid;
 
-    use crate::{entity::Like, repository::r#trait::LikeRepository};
+    use crate::{entity::Like, repository::r#trait::DislikeRepository};
 
     use super::InMemoryLikeRepository;
 
