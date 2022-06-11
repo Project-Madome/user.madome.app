@@ -64,7 +64,7 @@ impl From<Error> for crate::Error {
 
 pub async fn execute(payload: Payload, repository: Arc<RepositorySet>) -> crate::Result<Model> {
     let history = match payload {
-        Payload::Book { book_id, user_id } => History::book(book_id, user_id),
+        Payload::Book { book_id, user_id } => History::book(book_id, 1, user_id),
     };
 
     let removed = repository.history().remove(history).await?;

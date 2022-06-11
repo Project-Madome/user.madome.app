@@ -11,6 +11,7 @@ pub struct Model {
     #[sea_orm(index)]
     pub book_id: i32,
     pub user_id: Uuid,
+    pub page: i32,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
 }
@@ -32,6 +33,7 @@ impl From<Model> for History {
     fn from(
         Model {
             book_id,
+            page,
             user_id,
             created_at,
             updated_at,
@@ -40,6 +42,7 @@ impl From<Model> for History {
     ) -> Self {
         Self::Book {
             book_id: book_id as u32,
+            page: page as usize,
             user_id,
             created_at,
             updated_at,
@@ -54,6 +57,7 @@ impl From<History> for ActiveModel {
         match history {
             History::Book {
                 book_id,
+                page,
                 user_id,
                 created_at,
                 updated_at,
@@ -66,6 +70,7 @@ impl From<History> for ActiveModel {
                 Self {
                     id: Set(id),
                     book_id: Set(book_id as i32),
+                    page: Set(page as i32),
                     user_id: Set(user_id),
                     created_at: Set(created_at),
                     updated_at: Set(updated_at),

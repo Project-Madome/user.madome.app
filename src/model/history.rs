@@ -15,6 +15,7 @@ use super::Presenter;
 pub enum History {
     Book {
         book_id: u32,
+        page: usize,
         user_id: Uuid,
         created_at: DateTime<Utc>,
         updated_at: DateTime<Utc>,
@@ -35,11 +36,13 @@ impl From<entity::History> for History {
         match history {
             entity::History::Book {
                 book_id,
+                page,
                 user_id,
                 created_at,
                 updated_at,
             } => Self::Book {
                 book_id,
+                page,
                 user_id,
                 created_at,
                 updated_at,

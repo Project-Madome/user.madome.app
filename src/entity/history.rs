@@ -19,6 +19,7 @@ pub enum HistorySortBy {
 pub enum History {
     Book {
         book_id: u32,
+        page: usize,
         user_id: Uuid,
         created_at: DateTime<Utc>,
         updated_at: DateTime<Utc>,
@@ -27,11 +28,12 @@ pub enum History {
 
 impl History {
     /// constructor of history
-    pub fn book(book_id: u32, user_id: Uuid) -> Self {
+    pub fn book(book_id: u32, page: usize, user_id: Uuid) -> Self {
         let now = Utc::now();
 
         Self::Book {
             book_id,
+            page,
             user_id,
             created_at: now,
             updated_at: now,
