@@ -10,7 +10,7 @@ use crate::{
     constant::postgresql,
     database::{postgresql::entity::like, DatabaseSet},
     entity::{like::LikeSortBy, Like, LikeKind, Sort},
-    repository::r#trait::LikeRepository,
+    repository::r#trait::{LikeBy, LikeRepository},
 };
 
 #[derive(Component)]
@@ -80,7 +80,7 @@ impl LikeRepository for PostgresqlLikeRepository {
                 .filter(
                     like::book_tag::Column::UserId
                         .eq(user_id)
-                        .and(like::book::Column::IsDislike.eq(false)),
+                        .and(like::book_tag::Column::IsDislike.eq(false)),
                 )
                 .paginate(self.database.postgresql(), per_page)
                 .fetch_page(page - 1)
@@ -102,11 +102,11 @@ impl LikeRepository for PostgresqlLikeRepository {
                     r#"
                     SELECT * FROM
                     (
-                        SELECT id, user_id, book_id, NULL AS tag_kind, NULL AS tag_name, created_at
+                        SELECT id, user_id, book_id, NULL AS tag_kind, NULL AS tag_name, is_dislike, created_at
                             FROM {like_book_table}
                             WHERE user_id = $1 AND is_dislike = false
                         UNION ALL
-                        SELECT id, user_id, NULL, tag_kind, tag_name, created_at
+                        SELECT id, user_id, NULL, tag_kind, tag_name, is_dislike, created_at
                             FROM {like_book_tag_table}
                             WHERE user_id = $1 AND is_dislike = false
                     ) AS a
@@ -172,8 +172,68 @@ impl LikeRepository for PostgresqlLikeRepository {
         Ok(likes)
     }
 
+    async fn get_many_by(&self, user_id: Option<Uuid>, by: LikeBy) -> crate::Result<Vec<Like>> {
+        match by {
+            LikeBy::Book { ids } => {
+                if ids.is_empty() {
+                    return Ok(Vec::new());
+                }
+
+                let ids_cond = ids.into_iter().fold(Condition::any(), |acc, id| {
+                    acc.add(like::book::Column::BookId.eq(id))
+                });
+
+                let cond = Condition::all()
+                    .add(ids_cond)
+                    .add(like::book::Column::IsDislike.eq(false))
+                    .add_option(user_id.map(|x| like::book::Column::UserId.eq(x)));
+
+                let likes = like::book::Entity::find()
+                    .filter(cond)
+                    .all(self.database.postgresql())
+                    .await?;
+
+                Ok(likes
+                    .into_iter()
+                    .map(like::book::Model::into_like)
+                    .collect())
+            }
+
+            LikeBy::BookTag { tags } => {
+                if tags.is_empty() {
+                    return Ok(Vec::new());
+                }
+
+                let tags_cond = tags
+                    .into_iter()
+                    .fold(Condition::any(), |acc, (kind, name)| {
+                        acc.add(
+                            Condition::all()
+                                .add(like::book_tag::Column::TagKind.eq(kind))
+                                .add(like::book_tag::Column::TagName.eq(name)),
+                        )
+                    });
+
+                let cond = Condition::all()
+                    .add(tags_cond)
+                    .add(like::book_tag::Column::IsDislike.eq(false))
+                    .add_option(user_id.map(|x| like::book_tag::Column::UserId.eq(x)));
+
+                let likes = like::book_tag::Entity::find()
+                    .filter(cond)
+                    .all(self.database.postgresql())
+                    .await?;
+
+                Ok(likes
+                    .into_iter()
+                    .map(like::book_tag::Model::into_like)
+                    .collect())
+            }
+        }
+    }
+
     // TODO: 일단 정렬안함
-    async fn get_many_by_book_tags(
+    /* async fn get_many_by_book_tags(
         &self,
         book_tags: Vec<(String, String)>,
     ) -> crate::Result<Vec<Like>> {
@@ -204,7 +264,7 @@ impl LikeRepository for PostgresqlLikeRepository {
             .into_iter()
             .map(like::book_tag::Model::into_like)
             .collect())
-    }
+    } */
 
     async fn add(&self, like: Like) -> crate::Result<bool> {
         let r = match like.kind() {

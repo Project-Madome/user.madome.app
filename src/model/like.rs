@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use chrono::{DateTime, Utc};
 use hyper::{header, Body, Request, Response, StatusCode};
 use madome_sdk::api::{header::take_origin_response, library, Token};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use util::http::SetResponse;
 use uuid::Uuid;
 
@@ -164,13 +164,37 @@ impl Presenter for Vec<Like> {
                         if book_tags.is_empty() {
                             Ok(HashMap::new())
                         } else {
+                            #[derive(Debug, Default, Deserialize)]
+                            struct Payload {
+                                #[serde(rename = "books-per-page")]
+                                per_page: Option<usize>,
+                                #[serde(rename = "books-page")]
+                                page: Option<usize>,
+                                #[serde(rename = "books-sort-by")]
+                                sort_by: Option<String>,
+                            }
+
+                            let qs = request.uri().query().unwrap_or_default();
+                            let Payload {
+                                per_page,
+                                page,
+                                sort_by,
+                            } = serde_qs::from_str(qs).unwrap_or_default();
+
+                            let sort_by = match sort_by.as_deref() {
+                                Some("id-desc") => Some(library::payload::BookSortBy::IdDesc),
+                                Some("id-asc") => Some(library::payload::BookSortBy::IdAsc),
+                                Some("random") => Some(library::payload::BookSortBy::Random),
+                                _ => None,
+                            };
+
                             library::get_books_by_tags(
                                 config.library_url(),
                                 Token::default(),
                                 book_tags,
-                                3, // FIXME: querystring으로 인자를 받아야 되는데 인자 이름을 정해야 됨
-                                1, // FIXME:
-                                library::payload::BookSortBy::IdDesc,
+                                per_page.unwrap_or(3),
+                                page.unwrap_or(1),
+                                sort_by,
                             )
                             .await
                         }

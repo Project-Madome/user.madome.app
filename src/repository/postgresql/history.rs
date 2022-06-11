@@ -1,7 +1,8 @@
+use itertools::Itertools;
 use sai::{Component, ComponentLifecycle, Injected};
 use sea_orm::{
-    ColumnTrait, ConnectionTrait, EntityTrait, IdenStatic, PaginatorTrait, QueryFilter, QueryOrder,
-    Statement,
+    ColumnTrait, Condition, ConnectionTrait, EntityTrait, IdenStatic, PaginatorTrait, QueryFilter,
+    QueryOrder, Statement,
 };
 use util::sea_orm::OrderByRandom;
 use uuid::Uuid;
@@ -9,7 +10,7 @@ use uuid::Uuid;
 use crate::{
     database::{postgresql::entity::history, DatabaseSet},
     entity::{History, HistoryKind, HistorySortBy, Sort},
-    repository::r#trait::HistoryRepository,
+    repository::r#trait::{HistoryBy, HistoryRepository},
 };
 
 #[derive(Component)]
@@ -110,6 +111,25 @@ impl HistoryRepository for PostgresqlHistoryRepository {
                     .await?;
 
                 Ok(())
+            }
+        }
+    }
+
+    async fn get_many_by(&self, user_id: Uuid, by: HistoryBy) -> crate::Result<Vec<History>> {
+        // TODO: 나중에 kind가 생기면 그때 추가하면 됨
+        match by {
+            HistoryBy::Book { ids } => {
+                let cond = ids.into_iter().fold(Condition::any(), |acc, e| {
+                    acc.add(history::book::Column::BookId.eq(e))
+                });
+
+                let histories = history::book::Entity::find()
+                    .filter(history::book::Column::UserId.eq(user_id))
+                    .filter(cond)
+                    .all(self.database.postgresql())
+                    .await?;
+
+                Ok(histories.into_iter().map_into().collect())
             }
         }
     }

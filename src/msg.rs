@@ -1,13 +1,12 @@
 use std::sync::Arc;
 
-use hyper::{header, Body, Method, Request, Response};
+use hyper::{Body, Method, Request, Response};
 
-use madome_sdk::api::{auth, Token};
-use parking_lot::RwLock;
+use madome_sdk::api::{auth, cookie::MADOME_ACCESS_TOKEN, Token};
 use util::{
     http::{
         url::{is_path_variable, PathVariable},
-        SetResponse,
+        Cookie,
     },
     BodyParser, ToPayload,
 };
@@ -17,8 +16,8 @@ use crate::{
     config::Config,
     usecase::{
         create_like, create_notifications, create_or_update_fcm_token, create_or_update_history,
-        create_user, delete_history, delete_like, get_fcm_tokens, get_histories, get_likes,
-        get_likes_from_book_tags, get_notifications, get_user,
+        create_user, delete_history, delete_like, get_fcm_tokens, get_histories, get_histories_by,
+        get_likes, get_likes_by, get_notifications, get_user,
     },
 };
 
@@ -40,8 +39,8 @@ pub enum Msg {
 
     CreateLike(create_like::Payload),
     GetLikes(get_likes::Payload),
+    GetLikesBy(get_likes_by::Payload),
     DeleteLike(delete_like::Payload),
-    GetLikesFromBookTags(get_likes_from_book_tags::Payload),
 
     CreateNotifications(create_notifications::Payload),
     GetNotifications(get_notifications::Payload),
@@ -50,14 +49,15 @@ pub enum Msg {
     GetFcmTokens(get_fcm_tokens::Payload),
 
     CreateOrUpdateHistory(create_or_update_history::Payload),
-    DeleteHistory(delete_history::Payload),
     GetHistories(get_histories::Payload),
+    GetHistoriesBy(get_histories_by::Payload),
+    DeleteHistory(delete_history::Payload),
 }
 
 impl Msg {
     pub async fn http(
         request: &mut Request<Body>,
-        resp: &mut Response<Body>,
+        _resp: &mut Response<Body>,
         config: Arc<Config>,
     ) -> crate::Result<Self> {
         let headers = request.headers();
@@ -67,20 +67,28 @@ impl Msg {
         let access_token = cookie.get(MADOME_ACCESS_TOKEN).unwrap_or_default();
         let refresh_token = cookie.get(MADOME_REFRESH_TOKEN).unwrap_or_default(); */
 
-        let resp = RwLock::new(resp);
+        // let resp = RwLock::new(resp);
 
         let user_id = match auth::check_internal(headers) {
             Ok(_) => Uuid::nil(),
             Err(_) => {
                 // 사용자 토큰 추가
-                if let Some(cookie) = headers.get(header::COOKIE).cloned() {
+                /* if let Some(cookie) = headers.get(header::COOKIE).cloned() {
                     let mut resp = resp.write();
                     resp.set_header(header::COOKIE, cookie).unwrap();
-                }
+                } */
 
-                auth::check_and_refresh_token_pair(config.auth_url(), Token::Store(&resp), 0)
+                let access_token = Cookie::from(headers)
+                    .take(MADOME_ACCESS_TOKEN)
+                    .unwrap_or_default();
+
+                auth::check_access_token(config.auth_url(), Token::from(access_token), 0)
                     .await?
                     .user_id
+
+                /* auth::check_and_refresh_token_pair(config.auth_url(), Token::Store(&resp), 0)
+                .await?
+                .user_id */
             }
         };
 
@@ -177,13 +185,6 @@ impl Msg {
             }
 
             /* Internal */
-            (Method::GET, "/users/likes/book-tags", false) => {
-                let p = request.try_into()?;
-
-                Msg::GetLikesFromBookTags(p)
-            }
-
-            /* Internal */
             (Method::POST, "/users/notifications", false) => {
                 let p = request.body_parse().await?;
 
@@ -198,21 +199,56 @@ impl Msg {
             }
 
             /* Internal */
-            (Method::GET, path, false) if matcher(path, "/users/:user_id_or_email") => {
-                let p: get_user::Payload =
-                    PathVariable::from((path, "/users/:user_id_or_email")).into();
+            /* (Method::GET, "/users/likes", false) => {
+                let p = request.to_payload(Uuid::nil()).await?;
 
-                Msg::GetUser(p)
-            }
+                Msg::GetLikesBy(p)
+            } */
 
             /* Internal */
             (Method::GET, path, false) if matcher(path, "/users/:user_id/likes") => {
+                let user_id = PathVariable::from((path, "/users/:user_id/likes"))
+                    .next_variable::<Uuid>()
+                    .unwrap_or_default();
+
+                let p = request.to_payload(user_id).await?;
+
+                Msg::GetLikesBy(p)
+            }
+
+            (Method::GET, "/users/likes", false) => {
                 todo!()
             }
 
             /* Internal */
             (Method::GET, path, false) if matcher(path, "/users/:user_id/dislikes") => {
                 todo!()
+            }
+
+            /* Internal */
+            /* (Method::GET, "/users/histories", false) => {
+                let p = request.to_payload(Uuid::nil());
+
+                todo!()
+            } */
+
+            /* Internal */
+            (Method::GET, path, false) if matcher(path, "/users/:user_id/histories") => {
+                let user_id = PathVariable::from((path, "/users/:user_id/histories"))
+                    .next_variable::<Uuid>()
+                    .unwrap_or_default();
+
+                let p = request.to_payload(user_id).await?;
+
+                Msg::GetHistoriesBy(p)
+            }
+
+            /* Internal */
+            (Method::GET, path, false) if matcher(path, "/users/:user_id_or_email") => {
+                let p: get_user::Payload =
+                    PathVariable::from((path, "/users/:user_id_or_email")).into();
+
+                Msg::GetUser(p)
             }
 
             _ => return Err(Error::NotFound.into()),

@@ -2,6 +2,13 @@ use uuid::Uuid;
 
 use crate::entity::{Like, LikeKind, LikeSortBy};
 
+pub enum LikeBy {
+    Book { ids: Vec<u32> },
+    BookTag { tags: Vec<(String, String)> },
+}
+
+impl LikeBy {}
+
 #[async_trait::async_trait]
 pub trait LikeRepository: Send + Sync {
     async fn get_many(
@@ -13,10 +20,12 @@ pub trait LikeRepository: Send + Sync {
         sort_by: LikeSortBy,
     ) -> crate::Result<Vec<Like>>;
 
-    async fn get_many_by_book_tags(
+    async fn get_many_by(&self, user_id: Option<Uuid>, by: LikeBy) -> crate::Result<Vec<Like>>;
+
+    /* async fn get_many_by_book_tags(
         &self,
         book_tags: Vec<(String, String)>,
-    ) -> crate::Result<Vec<Like>>;
+    ) -> crate::Result<Vec<Like>>; */
 
     async fn add(&self, like: Like) -> crate::Result<bool>;
 

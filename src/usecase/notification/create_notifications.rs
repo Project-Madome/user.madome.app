@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use std::{collections::BTreeMap, sync::Arc};
+use uuid::Uuid;
 
 use crate::{
     command::CommandSet,
@@ -7,7 +8,7 @@ use crate::{
     error::UseCaseError,
     model::Like,
     repository::{r#trait::NotificationRepository, RepositorySet},
-    usecase::get_likes_from_book_tags,
+    usecase::get_likes_by,
 };
 
 #[cfg_attr(test, derive(PartialEq))]
@@ -47,8 +48,11 @@ pub async fn execute(
             #[allow(unused_variables)]
             let book_title = book_title;
 
-            let p = get_likes_from_book_tags::Payload { book_tags };
-            let likes = get_likes_from_book_tags::execute(p, repository.clone()).await?;
+            let p = get_likes_by::Payload::BookTag {
+                tags: book_tags,
+                user_id: Uuid::nil(),
+            };
+            let likes = get_likes_by::execute(p, repository.clone()).await?;
 
             // group by user id and book id
             let group_by = likes.into_iter().fold(BTreeMap::new(), |mut acc, like| {

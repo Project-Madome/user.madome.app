@@ -11,6 +11,8 @@ pub enum Error {
     #[error("Querystring deserialize: {0}")]
     QuerystringDeserialize(serde_qs::Error),
 
+    #[error("book-id: {0}")]
+    InvalidBookId(number::Error<u32>),
     #[error("per-page: {0}")]
     InvalidPerPage(number::Error<usize>),
     #[error("page: {0}")]

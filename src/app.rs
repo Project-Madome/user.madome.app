@@ -22,8 +22,8 @@ use crate::msg::Msg;
 use crate::repository::RepositorySet;
 use crate::usecase::{
     create_like, create_notifications, create_or_update_fcm_token, create_or_update_history,
-    create_user, delete_history, delete_like, get_fcm_tokens, get_histories, get_likes,
-    get_likes_from_book_tags, get_notifications, get_user,
+    create_user, delete_history, delete_like, get_fcm_tokens, get_histories, get_histories_by,
+    get_likes, get_likes_by, get_notifications, get_user,
 };
 
 #[derive(Component)]
@@ -56,11 +56,7 @@ impl Resolver {
 
             Msg::DeleteLike(payload) => delete_like::execute(payload, repository).await?.into(),
 
-            Msg::GetLikesFromBookTags(payload) => {
-                get_likes_from_book_tags::execute(payload, repository)
-                    .await?
-                    .into()
-            }
+            Msg::GetLikesBy(payload) => get_likes_by::execute(payload, repository).await?.into(),
 
             Msg::CreateNotifications(payload) => {
                 create_notifications::execute(payload, repository, command)
@@ -88,11 +84,15 @@ impl Resolver {
                     .into()
             }
 
+            Msg::GetHistories(payload) => get_histories::execute(payload, repository).await?.into(),
+
+            Msg::GetHistoriesBy(payload) => {
+                get_histories_by::execute(payload, repository).await?.into()
+            }
+
             Msg::DeleteHistory(payload) => {
                 delete_history::execute(payload, repository).await?.into()
             }
-
-            Msg::GetHistories(payload) => get_histories::execute(payload, repository).await?.into(),
         };
 
         Ok(model)

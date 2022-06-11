@@ -23,7 +23,7 @@ sea-orm = { version = "0.8", features = ["sqlx-postgres", "runtime-tokio-rustls"
 openssl = { version = "0.10", features = ["vendored"] }
 itertools = "0.10"
 querystring = "1.1"
-serde_qs = "0.8"
+serde_qs = "0.9"
 parking_lot = "0.12"
 futures = "0.3"
 inspect = { git = "https://github.com/syrflover/inspect-rs" }

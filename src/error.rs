@@ -10,8 +10,8 @@ use crate::{
     payload,
     usecase::{
         create_like, create_notifications, create_or_update_fcm_token, create_or_update_history,
-        create_user, delete_history, delete_like, get_fcm_tokens, get_histories, get_likes,
-        get_likes_from_book_tags, get_notifications, get_user,
+        create_user, delete_history, delete_like, get_fcm_tokens, get_histories, get_histories_by,
+        get_likes, get_likes_by, get_notifications, get_user,
     },
 };
 
@@ -92,13 +92,15 @@ pub enum UseCaseError {
 
     #[error("GetLikes: {0}")]
     GetLikes(#[from] get_likes::Error),
+    #[error("GetLikesBy: {0}")]
+    GetLikesBy(#[from] get_likes_by::Error),
     #[error("CreateLike: {0}")]
     CreateLike(#[from] create_like::Error),
     #[error("DeleteLike: {0}")]
     DeleteLike(#[from] delete_like::Error),
-    #[error("GetLikesFromBookTags: {0}")]
-    GetLikesFromBookTags(#[from] get_likes_from_book_tags::Error),
 
+    // #[error("GetLikesFromBookTags: {0}")]
+    // GetLikesFromBookTags(#[from] get_likes_from_book_tags::Error),
     #[error("CreateNotifications: {0}")]
     CreateNotifications(#[from] create_notifications::Error),
     #[error("GetNotifications: {0}")]
@@ -113,6 +115,8 @@ pub enum UseCaseError {
     CreateOrUpdateHistory(#[from] create_or_update_history::Error),
     #[error("GetHistories: {0}")]
     GetHistories(#[from] get_histories::Error),
+    #[error("GetHistoriesBy: {0}")]
+    GetHistoriesBy(#[from] get_histories_by::Error),
     #[error("DeleteHistory: {0}")]
     DeleteHistory(#[from] delete_history::Error),
 }
