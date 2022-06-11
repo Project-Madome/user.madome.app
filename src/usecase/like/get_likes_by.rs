@@ -50,7 +50,11 @@ impl From<Temp> for Payload {
 
             PayloadKind::BookTag => Self::BookTag {
                 user_id,
-                tags: tags.unwrap_or_default(),
+                tags: tags
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|(kind, name)| (kind, name.split('-').join(" ")))
+                    .collect(),
             },
         }
     }
